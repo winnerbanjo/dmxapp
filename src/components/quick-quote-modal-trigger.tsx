@@ -25,7 +25,7 @@ export function QuickQuoteModalTrigger() {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-none border border-[#5e1914] bg-[#5e1914] px-4 py-3 font-sans text-sm font-medium text-white shadow-lg transition-colors hover:bg-[#4a130f] md:bottom-8 md:right-8 md:px-5 md:py-3"
+        className="fixed bottom-6 right-6 z-40 flex h-12 min-h-[3rem] items-center gap-2 rounded-none border border-[#5e1914] bg-[#5e1914] px-4 py-3 font-sans text-sm font-medium text-white shadow-lg transition-colors hover:bg-[#4a130f] md:bottom-8 md:right-8 md:px-5"
         aria-label="Check rates"
       >
         <Calculator className="h-5 w-5 shrink-0" />
@@ -55,7 +55,7 @@ export function QuickQuoteModalTrigger() {
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="rounded p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
+                className="flex h-12 min-h-[3rem] w-12 min-w-[3rem] items-center justify-center rounded text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 sm:h-8 sm:min-h-0 sm:w-8 sm:min-w-0"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />

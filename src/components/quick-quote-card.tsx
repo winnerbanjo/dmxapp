@@ -32,7 +32,48 @@ export type QuoteResult = {
   zoneId?: ZoneId;
   weightKg: number;
   mode: QuoteMode;
+  /** For share text: origin and destination labels */
+  originLabel: string;
+  destinationLabel: string;
 };
+
+function getShareText(result: QuoteResult): string {
+  const price = `₦${result.amount.toLocaleString("en-NG")}`;
+  return `DMX Estimate: ${result.originLabel} to ${result.destinationLabel} for ${result.weightKg}kg is ${price}.`;
+}
+
+function ShareQuoteButton({ result }: { result: QuoteResult }) {
+  const text = getShareText(result);
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+
+  async function handleShare() {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: "DMX Shipping Quote",
+          text,
+        });
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          window.open(whatsappUrl, "_blank");
+        }
+      }
+    } else {
+      window.open(whatsappUrl, "_blank");
+    }
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      onClick={handleShare}
+      className="mt-4 h-12 min-h-[3rem] w-full rounded-none border-[#5e1914] font-sans font-medium text-[#5e1914] hover:bg-[#5e1914]/5 sm:h-10 sm:min-h-0"
+    >
+      Share Quote
+    </Button>
+  );
+}
 
 function QuoteResultView({ result, onClose }: { result: QuoteResult; onClose?: () => void }) {
   return (
@@ -45,7 +86,7 @@ function QuoteResultView({ result, onClose }: { result: QuoteResult; onClose?: (
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
+            className="flex h-12 min-h-[3rem] w-12 min-w-[3rem] items-center justify-center rounded text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 sm:h-8 sm:min-h-0 sm:w-8 sm:min-w-0"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
@@ -58,6 +99,7 @@ function QuoteResultView({ result, onClose }: { result: QuoteResult; onClose?: (
       <p className="mt-1 text-xs text-zinc-500">
         {result.weightKg} kg · {result.zoneLabel ?? "Standard rate"}
       </p>
+      <ShareQuoteButton result={result} />
     </div>
   );
 }
@@ -88,6 +130,10 @@ export function QuickQuoteCard({ className }: { className?: string }) {
   function handleGenerateQuote() {
     if (!country?.trim() || weightNum <= 0) return;
 
+    const countryLabel = countryOptions.find((c) => c.value === country)?.label ?? country;
+    const originLabel = mode === "export" ? "Nigeria" : countryLabel;
+    const destinationLabel = mode === "export" ? countryLabel : "Nigeria";
+
     const zone = getZoneFromCountry(country);
     if (!zone) {
       setResult({
@@ -95,6 +141,8 @@ export function QuickQuoteCard({ className }: { className?: string }) {
         currency: "NGN",
         weightKg: weightNum,
         mode,
+        originLabel,
+        destinationLabel,
       });
     } else {
       const cost = getCarrierCostForZone(weightNum, zone);
@@ -106,6 +154,8 @@ export function QuickQuoteCard({ className }: { className?: string }) {
         zoneId: zone,
         weightKg: weightNum,
         mode,
+        originLabel,
+        destinationLabel,
       };
       setResult(quote);
 
@@ -140,7 +190,7 @@ export function QuickQuoteCard({ className }: { className?: string }) {
               setResult(null);
             }}
             className={cn(
-              "flex-1 py-2 text-xs font-medium transition-colors",
+              "flex-1 py-3 text-xs font-medium transition-colors sm:py-2",
               mode === "export"
                 ? "bg-[#5e1914] text-white"
                 : "bg-transparent text-zinc-600 hover:bg-zinc-50"
@@ -156,7 +206,7 @@ export function QuickQuoteCard({ className }: { className?: string }) {
               setResult(null);
             }}
             className={cn(
-              "flex-1 py-2 text-xs font-medium transition-colors",
+              "flex-1 py-3 text-xs font-medium transition-colors sm:py-2",
               mode === "import"
                 ? "bg-[#5e1914] text-white"
                 : "bg-transparent text-zinc-600 hover:bg-zinc-50"
@@ -226,7 +276,7 @@ export function QuickQuoteCard({ className }: { className?: string }) {
           <Button
             type="button"
             onClick={handleGenerateQuote}
-            className="w-full rounded-none bg-[#5e1914] font-sans font-medium text-white hover:bg-[#4a130f]"
+            className="h-12 min-h-[3rem] w-full rounded-none bg-[#5e1914] font-sans font-medium text-white hover:bg-[#4a130f] sm:h-10 sm:min-h-0"
           >
             Generate Quote
           </Button>
@@ -271,7 +321,7 @@ export function QuickQuoteCard({ className }: { className?: string }) {
               type="button"
               onClick={() => setShowMobileModal(false)}
               variant="secondary"
-              className="mt-4 w-full rounded-none font-sans"
+              className="mt-4 h-12 min-h-[3rem] w-full rounded-none font-sans"
             >
               Close
             </Button>

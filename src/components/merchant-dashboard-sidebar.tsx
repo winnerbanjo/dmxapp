@@ -31,7 +31,7 @@ export function MerchantDashboardSidebar({
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-zinc-100 bg-zinc-50">
+    <aside className="hidden h-full w-64 flex-col border-r border-zinc-100 bg-zinc-50 md:flex">
       <div className="flex h-20 items-center border-b border-zinc-100 px-8">
         <Link
           href="/merchant/dashboard"

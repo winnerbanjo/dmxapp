@@ -119,22 +119,24 @@ export default async function MerchantDashboardPage({
   const maxVolume = Math.max(...volumeByMonth.map((x) => x.count), 1);
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-5xl px-0">
       <QuickQuoteModalTrigger />
       {showKycBanner && <MerchantKycBanner showBlockedMessage={showBlockedMessage} />}
       <MerchantDashboardDateFilter />
-      <h1 className="mt-8 font-sans text-4xl font-bold tracking-tighter text-zinc-900">
-        Welcome, Mubarak
-      </h1>
-      <p className="mt-4 text-sm text-zinc-500">
-        Your logistics at a glance.
-      </p>
-      <p className="mt-1 text-xs text-zinc-400">
-        As of {STATIC_DISPLAY_DATE}
-      </p>
+      <div className="text-center md:text-left">
+        <h1 className="mt-8 font-sans text-4xl font-bold tracking-tighter text-zinc-900">
+          Welcome, Mubarak
+        </h1>
+        <p className="mt-4 text-sm text-zinc-500">
+          Your logistics at a glance.
+        </p>
+        <p className="mt-1 text-xs text-zinc-400">
+          As of {STATIC_DISPLAY_DATE}
+        </p>
+      </div>
 
-      {/* Stats — Logistics at a glance */}
-      <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Stats — Logistics at a glance, stack vertically on mobile */}
+      <div className="mt-12 flex flex-col gap-6 sm:grid sm:grid-cols-2 lg:grid-cols-4">
         {statCards.map(({ label, value, icon: Icon }) => (
           <div key={label} className="border border-zinc-100 bg-white p-8">
             <div className="flex items-center gap-4">
@@ -173,7 +175,8 @@ export default async function MerchantDashboardPage({
               </Link>
             </div>
           ) : (
-            <table className="w-full text-left text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px] text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-100 bg-zinc-50">
                   <th className="px-8 py-5 font-medium tracking-tight text-zinc-900">Tracking</th>
@@ -215,6 +218,7 @@ export default async function MerchantDashboardPage({
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </section>

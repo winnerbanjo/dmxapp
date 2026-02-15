@@ -62,7 +62,7 @@ export function DateFilter({ value, onChange, className }: DateFilterProps) {
             type="button"
             onClick={() => handlePreset(preset.value)}
             className={cn(
-              "rounded-none border px-3 py-2 text-sm font-medium transition-colors",
+              "h-12 min-h-[3rem] rounded-none border px-3 py-2 text-sm font-medium transition-colors sm:h-auto sm:min-h-0",
               value.period === preset.value
                 ? "border-[#5e1914] bg-[#5e1914] text-white"
                 : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
