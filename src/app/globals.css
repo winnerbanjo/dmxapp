@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Apple-style minimalist white: force white background, no dark mode */
+body {
+  background: #ffffff;
+  color: #18181b;
+}
+
+/* Razor-sharp, industrial edges globally */
+* {
+  border-radius: 0 !important;
+}
+
+::selection {
+  background-color: #5e1914;
+  color: white;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline-color: #5e1914;
+}
+
+/* Apple-minimalist: Geist Sans, tracking-tight, pure white, 1px zinc-100 */
+body {
+  letter-spacing: -0.02em;
+}
+h1, h2, h3, .heading-tight {
+  letter-spacing: -0.025em;
+}
