@@ -15,11 +15,10 @@ export default function AuthLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white font-sans">
-      <div className="mx-auto flex max-w-4xl flex-col items-center gap-8 px-4 pt-12 pb-20 md:flex-row md:items-start md:justify-center md:gap-12 md:px-10 md:pt-20">
-        <div className="flex w-full flex-col items-center md:max-w-sm">
-          <div className="flex justify-center">
-            {!logoError ? (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-white px-4 py-12 font-sans">
+      <div className="w-full max-w-sm">
+        <div className="mb-8 flex justify-center">
+          {!logoError ? (
             <Image
               src="/dmxlogo.svg"
               alt="DMX"
@@ -35,43 +34,43 @@ export default function AuthLoginPage() {
           )}
         </div>
 
-        <div className="mt-8 w-full shrink-0 border border-zinc-100 bg-white p-8 md:mt-12 md:max-w-sm">
+        <div className="w-full border border-zinc-100 bg-white p-8">
           <p className="text-center text-[11px] font-medium uppercase tracking-[0.2em] text-zinc-500">
             Merchant Sign In
           </p>
 
           <div className="mt-10 flex flex-col gap-4">
-          <form action={setDemoMerchantSession}>
+            <form action={setDemoMerchantSession}>
+              <button
+                type="submit"
+                className="w-full rounded-none bg-[#5e1914] py-4 text-sm font-medium text-white hover:bg-[#4a130f]"
+              >
+                Merchant Demo (Approved)
+              </button>
+            </form>
+            <form action={setDemoMerchantPendingSession}>
+              <button
+                type="submit"
+                className="w-full rounded-none border border-zinc-200 bg-white py-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+              >
+                Merchant Demo (Pending KYC)
+              </button>
+            </form>
             <button
-              type="submit"
-              className="w-full rounded-none bg-[#5e1914] py-4 text-sm font-medium text-white hover:bg-[#4a130f]"
-            >
-              Merchant Demo (Approved)
-            </button>
-          </form>
-          <form action={setDemoMerchantPendingSession}>
-            <button
-              type="submit"
-              className="w-full rounded-none border border-zinc-200 bg-white py-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-            >
-              Merchant Demo (Pending KYC)
-            </button>
-          </form>
-          <button
-            type="button"
-            onClick={handleAdminDemo}
-            className="w-full rounded-none border border-zinc-100 bg-white py-4 text-sm font-medium text-[#5e1914] hover:bg-zinc-50"
-          >
-            Admin Demo
-          </button>
-          <form action={setDemoHubSession}>
-            <button
-              type="submit"
+              type="button"
+              onClick={handleAdminDemo}
               className="w-full rounded-none border border-zinc-100 bg-white py-4 text-sm font-medium text-[#5e1914] hover:bg-zinc-50"
             >
-              Hub Demo
+              Admin Demo
             </button>
-          </form>
+            <form action={setDemoHubSession}>
+              <button
+                type="submit"
+                className="w-full rounded-none border border-zinc-100 bg-white py-4 text-sm font-medium text-[#5e1914] hover:bg-zinc-50"
+              >
+                Hub Demo
+              </button>
+            </form>
           </div>
 
           <div className="mt-12 space-y-4 text-center">
