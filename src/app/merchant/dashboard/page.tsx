@@ -7,7 +7,7 @@ import { getSession } from "@dmx/lib/auth";
 import { Package, CheckCircle, Wallet, Truck } from "lucide-react";
 import { MerchantDashboardDateFilter } from "./merchant-dashboard-date-filter";
 import { MerchantKycBanner } from "@/components/merchant-kyc-banner";
-import { QuickQuoteCard } from "@/components/quick-quote-card";
+import { QuickQuoteModalTrigger } from "@/components/quick-quote-modal-trigger";
 import { getMerchantKycStatus } from "@/lib/merchant-kyc";
 import { formatDemoDateOnly, STATIC_DISPLAY_DATE } from "@/lib/demo-date";
 
@@ -120,6 +120,7 @@ export default async function MerchantDashboardPage({
 
   return (
     <div className="mx-auto max-w-5xl">
+      <QuickQuoteModalTrigger />
       {showKycBanner && <MerchantKycBanner showBlockedMessage={showBlockedMessage} />}
       <MerchantDashboardDateFilter />
       <h1 className="mt-8 font-sans text-4xl font-bold tracking-tighter text-zinc-900">
@@ -132,13 +133,7 @@ export default async function MerchantDashboardPage({
         As of {STATIC_DISPLAY_DATE}
       </p>
 
-      {/* Quick Actions — Quick Quote first (top on mobile, side on desktop) */}
-      <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <div className="order-first">
-          <QuickQuoteCard className="h-full" />
-        </div>
-      </div>
-
+      {/* Stats — Logistics at a glance */}
       <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {statCards.map(({ label, value, icon: Icon }) => (
           <div key={label} className="border border-zinc-100 bg-white p-8">
