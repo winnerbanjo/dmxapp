@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { setDemoMerchantSession, setDemoMerchantPendingSession, setDemoHubSession } from "./actions";
-import { QuickQuoteCard } from "@/components/quick-quote-card";
 
 export default function AuthLoginPage() {
   const router = useRouter();
@@ -90,12 +89,6 @@ export default function AuthLoginPage() {
           <p className="mt-8 text-center text-[11px] text-zinc-400">
             Demo access only. No credentials required.
           </p>
-        </div>
-        </div>
-
-        {/* Quick Quote — stacks below on mobile, beside on desktop */}
-        <div className="w-full shrink-0 md:max-w-sm">
-          <QuickQuoteCard />
         </div>
       </div>
     </div>

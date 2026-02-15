@@ -7,6 +7,7 @@ import { getSession } from "@dmx/lib/auth";
 import { Package, CheckCircle, Wallet, Truck } from "lucide-react";
 import { MerchantDashboardDateFilter } from "./merchant-dashboard-date-filter";
 import { MerchantKycBanner } from "@/components/merchant-kyc-banner";
+import { QuickQuoteCard } from "@/components/quick-quote-card";
 import { getMerchantKycStatus } from "@/lib/merchant-kyc";
 import { formatDemoDateOnly, STATIC_DISPLAY_DATE } from "@/lib/demo-date";
 
@@ -130,6 +131,13 @@ export default async function MerchantDashboardPage({
       <p className="mt-1 text-xs text-zinc-400">
         As of {STATIC_DISPLAY_DATE}
       </p>
+
+      {/* Quick Actions — Quick Quote first (top on mobile, side on desktop) */}
+      <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="order-first">
+          <QuickQuoteCard className="h-full" />
+        </div>
+      </div>
 
       <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {statCards.map(({ label, value, icon: Icon }) => (

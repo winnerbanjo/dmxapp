@@ -7,7 +7,7 @@ import type { HubFinancialRow } from "@/data/admin-hub-demo";
 import { ADMIN_DEMO_SHIPMENTS } from "@/data/demo-shipments";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { STATIC_ISO } from "@/lib/demo-date";
+import { STATIC_ISO, formatDemoDateOnly } from "@/lib/demo-date";
 
 /** Sum of (Selling Price - Cost Price) for all successful (Delivered) shipments. */
 function getTotalNetProfit(): number {
@@ -67,6 +67,25 @@ export function AdminDashboardContent() {
           ? "last7"
           : "custom";
 
+  const revenueDateSubtext = useMemo(() => {
+    const base = new Date(STATIC_ISO);
+    if (dateState.period === "today") return `as of ${formatDemoDateOnly(STATIC_ISO)}`;
+    if (dateState.period === "yesterday") {
+      const y = new Date(base);
+      y.setDate(y.getDate() - 1);
+      return formatDemoDateOnly(y.toISOString());
+    }
+    if (dateState.period === "last7") {
+      const from = new Date(base);
+      from.setDate(from.getDate() - 6);
+      return `${formatDemoDateOnly(from.toISOString())} - ${formatDemoDateOnly(STATIC_ISO)}`;
+    }
+    if (dateState.period === "custom" && dateState.customFrom && dateState.customTo) {
+      return `${formatDemoDateOnly(dateState.customFrom)} - ${formatDemoDateOnly(dateState.customTo)}`;
+    }
+    return `as of ${formatDemoDateOnly(STATIC_ISO)}`;
+  }, [dateState]);
+
   return (
     <>
       {/* Date Filter — updates all financial numbers instantly */}
@@ -83,6 +102,9 @@ export function AdminDashboardContent() {
             </p>
             <p className="mt-2 text-2xl font-semibold tracking-tighter text-zinc-900">
               {formatMoneyFull(summary.totalRevenue)}
+            </p>
+            <p className="mt-1 text-xs text-zinc-400">
+              {revenueDateSubtext}
             </p>
           </div>
           <div className="border border-zinc-100 bg-white p-6 font-sans">
