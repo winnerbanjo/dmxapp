@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { setDemoMerchantSession, setDemoMerchantPendingSession, setDemoHubSession } from "./actions";
+import { QuickQuoteCard } from "@/components/quick-quote-card";
 
 export default function AuthLoginPage() {
   const router = useRouter();
@@ -15,10 +16,11 @@ export default function AuthLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="mx-auto flex max-w-sm flex-col items-center px-10 pt-20 pb-20">
-        <div className="flex justify-center">
-          {!logoError ? (
+    <div className="min-h-screen bg-white font-sans">
+      <div className="mx-auto flex max-w-4xl flex-col items-center gap-8 px-4 pt-12 pb-20 md:flex-row md:items-start md:justify-center md:gap-12 md:px-10 md:pt-20">
+        <div className="flex w-full flex-col items-center md:max-w-sm">
+          <div className="flex justify-center">
+            {!logoError ? (
             <Image
               src="/dmxlogo.svg"
               alt="DMX"
@@ -34,7 +36,7 @@ export default function AuthLoginPage() {
           )}
         </div>
 
-        <div className="mt-12 w-full border border-zinc-100 bg-white p-8">
+        <div className="mt-8 w-full shrink-0 border border-zinc-100 bg-white p-8 md:mt-12 md:max-w-sm">
           <p className="text-center text-[11px] font-medium uppercase tracking-[0.2em] text-zinc-500">
             Merchant Sign In
           </p>
@@ -88,6 +90,12 @@ export default function AuthLoginPage() {
           <p className="mt-8 text-center text-[11px] text-zinc-400">
             Demo access only. No credentials required.
           </p>
+        </div>
+        </div>
+
+        {/* Quick Quote — stacks below on mobile, beside on desktop */}
+        <div className="w-full shrink-0 md:max-w-sm">
+          <QuickQuoteCard />
         </div>
       </div>
     </div>
