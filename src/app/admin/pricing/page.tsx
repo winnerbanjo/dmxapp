@@ -284,6 +284,39 @@ export default function AdminPricingPage() {
         </div>
       </header>
 
+      <section className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="border border-zinc-200 bg-white p-6">
+          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Pricing logic layers</p>
+          <ul className="mt-4 space-y-2 text-sm text-zinc-700">
+            <li>Weight-based pricing</li>
+            <li>Zone-based pricing</li>
+            <li>Volume-based pricing</li>
+            <li>Custom merchant rules</li>
+            <li>Margin application</li>
+          </ul>
+        </div>
+        <div className="border border-zinc-200 bg-white p-6">
+          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Price engine flow</p>
+          <ol className="mt-4 space-y-2 text-sm text-zinc-700">
+            <li>1. Shipment input</li>
+            <li>2. Data validation</li>
+            <li>3. Option filtering</li>
+            <li>4. Price computation</li>
+            <li>5. Margin application</li>
+            <li>6. Final display</li>
+          </ol>
+        </div>
+        <div className="border border-zinc-200 bg-white p-6">
+          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Fallback logic</p>
+          <ul className="mt-4 space-y-2 text-sm text-zinc-700">
+            <li>API price first for integrated partners.</li>
+            <li>CSV card used when no live partner response exists.</li>
+            <li>Manual editor remains operational override.</li>
+            <li>Preview required before final upload activation.</li>
+          </ul>
+        </div>
+      </section>
+
       <Tabs value={tab} onValueChange={handleTabChange} className="mt-10">
         <TabsList className="relative z-20 h-auto w-full justify-start gap-0 rounded-none border-0 border-b border-zinc-200 bg-transparent p-0">
           <TabsTrigger value="api" className={cn(TAB_STYLES, "cursor-pointer hover:bg-zinc-50")}>

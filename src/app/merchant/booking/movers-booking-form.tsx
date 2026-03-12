@@ -29,10 +29,16 @@ type Sender = { businessName: string; email: string; address: string };
 export function MoversBookingForm({
   sender,
   merchantId,
+  initialValues,
   onBack,
 }: {
   sender: Sender;
   merchantId?: string;
+  initialValues?: {
+    receiverName?: string;
+    receiverPhone?: string;
+    deliveryAddress?: string;
+  };
   onBack: () => void;
 }) {
   const { getMoversRatesForMerchant, getMoversDiscountPercent } = useRateCard();
@@ -43,7 +49,7 @@ export function MoversBookingForm({
   const [addBoxes, setAddBoxes] = useState(false);
   const [addBubbleWrap, setAddBubbleWrap] = useState(false);
   const [pickupAddress, setPickupAddress] = useState(sender.address || "");
-  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState(initialValues?.deliveryAddress ?? "");
   const [notes, setNotes] = useState("");
 
   const baseVanPrice = useMemo(() => {
@@ -87,6 +93,13 @@ export function MoversBookingForm({
       </div>
 
       <div className="space-y-8">
+        {(initialValues?.receiverName || initialValues?.receiverPhone) && (
+          <div className="border border-zinc-100 bg-zinc-50 p-4">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Request contact</p>
+            <p className="mt-2 text-sm text-zinc-900">{initialValues?.receiverName ?? "Customer"}</p>
+            <p className="text-sm text-zinc-500">{initialValues?.receiverPhone ?? "—"}</p>
+          </div>
+        )}
         <div>
           <Label className="text-sm font-medium text-zinc-900">Van Size</Label>
           <div className="mt-2 flex flex-wrap gap-2">

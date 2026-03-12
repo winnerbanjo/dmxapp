@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, LayoutDashboard, Package, Users, Wallet, Settings, LogOut, Calculator } from "lucide-react";
+import { Menu, X, LayoutDashboard, Package, Users, Wallet, Settings, LogOut, Calculator, BarChart3 } from "lucide-react";
 import { logoutMerchant } from "@/app/auth/logout/actions";
 
 const nav = [
@@ -12,6 +12,7 @@ const nav = [
   { href: "/merchant/dashboard/shipments", label: "Shipments", icon: Package },
   { href: "/merchant/dashboard/customers", label: "Customers", icon: Users },
   { href: "/merchant/dashboard/wallet", label: "Wallet", icon: Wallet },
+  { href: "/merchant/dashboard/reports", label: "Reports", icon: BarChart3 },
   { href: "/merchant/dashboard/rate-checker", label: "Rate Checker", icon: Calculator },
   { href: "/merchant/dashboard/settings", label: "Settings", icon: Settings },
 ];

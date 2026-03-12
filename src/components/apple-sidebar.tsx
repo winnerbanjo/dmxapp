@@ -13,6 +13,8 @@ import {
   CheckSquare,
   DollarSign,
   Truck,
+  BarChart3,
+  Shield,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -92,6 +94,8 @@ const adminNav = [
   { href: "/admin/shipments", label: "Shipments", icon: History },
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/pricing", label: "Pricing Engine", icon: DollarSign },
+  { href: "/admin/reports", label: "Reports", icon: BarChart3 },
+  { href: "/admin/users", label: "User Control", icon: Shield },
   { href: "/admin/partners", label: "Partners", icon: Truck },
 ];
 

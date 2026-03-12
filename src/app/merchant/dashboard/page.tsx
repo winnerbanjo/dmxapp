@@ -27,6 +27,15 @@ const DEMO_MONTHLY_VOLUME = [
   { month: "Feb", count: 235 },
 ];
 
+const DEMO_DAILY_SERIES = [
+  { day: "Mon", shipments: 18, delivered: 13, customers: 4, revenue: 54000, profit: 12000 },
+  { day: "Tue", shipments: 22, delivered: 17, customers: 6, revenue: 72000, profit: 18000 },
+  { day: "Wed", shipments: 19, delivered: 15, customers: 5, revenue: 61000, profit: 14500 },
+  { day: "Thu", shipments: 24, delivered: 18, customers: 7, revenue: 79000, profit: 20500 },
+  { day: "Fri", shipments: 27, delivered: 21, customers: 8, revenue: 86000, profit: 23300 },
+  { day: "Sat", shipments: 15, delivered: 12, customers: 3, revenue: 43000, profit: 9800 },
+];
+
 const DEMO_RECENT_ACTIVITY = [
   { trackingId: "DMX-782", route: "Lagos to Abuja", amount: 4500, status: "In-Transit" },
   { trackingId: "DMX-781", route: "Ikeja to Lekki", amount: 2500, status: "Delivered" },
@@ -117,6 +126,8 @@ export default async function MerchantDashboardPage({
   ];
 
   const maxVolume = Math.max(...volumeByMonth.map((x) => x.count), 1);
+  const maxTrend = Math.max(...DEMO_DAILY_SERIES.map((x) => Math.max(x.shipments, x.delivered, x.customers)), 1);
+  const revenuePeak = Math.max(...DEMO_DAILY_SERIES.map((x) => x.revenue), 1);
 
   return (
     <div className="mx-auto max-w-5xl px-0">
@@ -155,6 +166,59 @@ export default async function MerchantDashboardPage({
           </div>
         ))}
       </div>
+
+      <section className="mt-16">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight text-zinc-900">Advanced analytics</h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              Daily shipments, delivered volume, customer acquisition, profit, and revenue trends.
+            </p>
+          </div>
+          <Link href="/merchant/dashboard/reports" className="text-sm font-medium text-[#5e1914] hover:underline">
+            Open reports
+          </Link>
+        </div>
+        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+          <div className="border border-zinc-100 bg-white p-6">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Daily trend lines</p>
+            <div className="mt-6 flex items-end gap-4" style={{ minHeight: 220 }}>
+              {DEMO_DAILY_SERIES.map((item) => (
+                <div key={item.day} className="flex flex-1 flex-col items-center gap-3">
+                  <div className="flex h-44 w-full items-end justify-center gap-1">
+                    <div className="w-1/3 bg-[#5e1914]" style={{ height: `${Math.max(10, (item.shipments / maxTrend) * 170)}px` }} title={`Shipments ${item.shipments}`} />
+                    <div className="w-1/3 bg-green-600" style={{ height: `${Math.max(10, (item.delivered / maxTrend) * 170)}px` }} title={`Delivered ${item.delivered}`} />
+                    <div className="w-1/3 bg-zinc-300" style={{ height: `${Math.max(10, (item.customers / maxTrend) * 170)}px` }} title={`Customers ${item.customers}`} />
+                  </div>
+                  <span className="text-xs text-zinc-500">{item.day}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 flex gap-4 text-xs text-zinc-500">
+              <span className="inline-flex items-center gap-2"><span className="h-2 w-2 bg-[#5e1914]" /> Shipments/day</span>
+              <span className="inline-flex items-center gap-2"><span className="h-2 w-2 bg-green-600" /> Delivered/day</span>
+              <span className="inline-flex items-center gap-2"><span className="h-2 w-2 bg-zinc-300" /> Customer acquisition/day</span>
+            </div>
+          </div>
+          <div className="border border-zinc-100 bg-white p-6">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Revenue and profit</p>
+            <ul className="mt-5 space-y-4">
+              {DEMO_DAILY_SERIES.map((item) => (
+                <li key={item.day}>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-zinc-700">{item.day}</span>
+                    <span className="font-medium text-zinc-900">₦{item.revenue.toLocaleString("en-NG")}</span>
+                  </div>
+                  <div className="mt-2 h-2 bg-zinc-100">
+                    <div className="h-2 bg-[#5e1914]" style={{ width: `${Math.max(8, (item.revenue / revenuePeak) * 100)}%` }} />
+                  </div>
+                  <p className="mt-1 text-xs text-zinc-500">Profit ₦{item.profit.toLocaleString("en-NG")}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
 
       <section className="mt-16">
         <div className="flex items-center justify-between">

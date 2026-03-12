@@ -34,26 +34,35 @@ export function BookingPowerForm({
   sender,
   serviceType,
   merchantId,
+  initialValues,
   onBack,
 }: {
   sender: Sender;
   serviceType: ServiceType;
   merchantId?: string;
+  initialValues?: {
+    receiverName?: string;
+    receiverPhone?: string;
+    destination?: string;
+    weight?: string;
+    declaredValue?: string;
+    receiverCountry?: string;
+  };
   onBack: () => void;
 }) {
-  const [receiverName, setReceiverName] = useState("");
-  const [receiverPhone, setReceiverPhone] = useState("");
+  const [receiverName, setReceiverName] = useState(initialValues?.receiverName ?? "");
+  const [receiverPhone, setReceiverPhone] = useState(initialValues?.receiverPhone ?? "");
   const [receiverStructured, setReceiverStructured] = useState<StructuredAddressValue>(emptyStructuredAddress());
   const [assignedHub, setAssignedHub] = useState(DESTINATION_HUB_OPTIONS[0].value);
-  const [weight, setWeight] = useState("");
+  const [weight, setWeight] = useState(initialValues?.weight ?? "");
   const [itemCategory, setItemCategory] = useState("");
-  const [declaredValue, setDeclaredValue] = useState("");
+  const [declaredValue, setDeclaredValue] = useState(initialValues?.declaredValue ?? "");
   const [serviceLevel, setServiceLevel] = useState<"Standard" | "Express">("Standard");
   const [itemValueCustoms, setItemValueCustoms] = useState("");
   const [hsCode, setHsCode] = useState("");
   const [idPassportNumber, setIdPassportNumber] = useState("");
   const [packageCategory, setPackageCategory] = useState("");
-  const [receiverCountry, setReceiverCountry] = useState("");
+  const [receiverCountry, setReceiverCountry] = useState(initialValues?.receiverCountry ?? "");
 
   const isInternational = serviceType === "international";
 
@@ -209,6 +218,11 @@ export function BookingPowerForm({
                   required={true}
                   onHubSuggest={handleReceiverHubSuggest}
                 />
+                {initialValues?.destination && !receiverStructured.streetAddress && (
+                  <p className="text-xs text-zinc-500">
+                    Quote selection destination: {initialValues.destination}. Complete the full structured address below for dispatch.
+                  </p>
+                )}
                 <div>
                   <Label htmlFor="assignedHub" className="text-zinc-700">Destination Hub (Smart mapping)</Label>
                   <select
