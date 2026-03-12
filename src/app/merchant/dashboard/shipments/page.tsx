@@ -11,11 +11,15 @@ export default async function MerchantShipmentsPage() {
   const list = DEMO_SHIPMENTS.map((d) => ({
     id: d.id,
     trackingId: d.trackingId,
+    customerName: d.customerName,
     receiverName: d.receiverName,
+    destination: d.destination,
     receiverPhone: d.receiverPhone,
+    serviceOption: d.serviceOption,
     status: d.status,
     packageWeight: d.packageWeight,
     cost: d.cost,
+    paymentStatus: d.paymentStatus,
     createdAt: d.createdAt,
   }));
 

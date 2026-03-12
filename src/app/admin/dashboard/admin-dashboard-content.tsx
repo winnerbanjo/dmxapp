@@ -86,6 +86,25 @@ export function AdminDashboardContent() {
     return `as of ${formatDemoDateOnly(STATIC_ISO)}`;
   }, [dateState]);
 
+  const segmentedMetrics = useMemo(() => {
+    const hubShipments = ADMIN_DEMO_SHIPMENTS.filter((s) => s.origin.toLowerCase().includes("hub"));
+    const merchantSet = new Set(ADMIN_DEMO_SHIPMENTS.map((s) => s.merchant));
+    const deliveredByHub = hubShipments.filter((s) => s.status.toLowerCase().includes("delivered")).length;
+    const deliveredByMerchant = ADMIN_DEMO_SHIPMENTS.filter((s) => s.status.toLowerCase().includes("delivered")).length;
+    return {
+      hub: {
+        shipments: hubShipments.length,
+        delivered: deliveredByHub,
+        revenue: hubShipments.reduce((sum, s) => sum + s.amount, 0),
+      },
+      merchant: {
+        partners: merchantSet.size,
+        shipments: ADMIN_DEMO_SHIPMENTS.length,
+        delivered: deliveredByMerchant,
+      },
+    };
+  }, []);
+
   return (
     <>
       {/* Date Filter — updates all financial numbers instantly */}
@@ -145,6 +164,25 @@ export function AdminDashboardContent() {
               Sum (Selling − Cost) for delivered
             </p>
           </div>
+        </div>
+      </section>
+
+      <section className="mt-10 grid gap-6 sm:grid-cols-2">
+        <div className="border border-zinc-100 bg-white p-6 font-sans">
+          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Hub Metrics (Internal)</p>
+          <dl className="mt-4 space-y-2 text-sm">
+            <div className="flex justify-between"><dt className="text-zinc-500">Shipments</dt><dd className="font-medium text-zinc-900">{segmentedMetrics.hub.shipments.toLocaleString()}</dd></div>
+            <div className="flex justify-between"><dt className="text-zinc-500">Delivered</dt><dd className="font-medium text-zinc-900">{segmentedMetrics.hub.delivered.toLocaleString()}</dd></div>
+            <div className="flex justify-between"><dt className="text-zinc-500">Revenue</dt><dd className="font-medium text-zinc-900">{formatMoneyFull(segmentedMetrics.hub.revenue)}</dd></div>
+          </dl>
+        </div>
+        <div className="border border-zinc-100 bg-white p-6 font-sans">
+          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Merchant Metrics (External)</p>
+          <dl className="mt-4 space-y-2 text-sm">
+            <div className="flex justify-between"><dt className="text-zinc-500">Active Merchants</dt><dd className="font-medium text-zinc-900">{segmentedMetrics.merchant.partners.toLocaleString()}</dd></div>
+            <div className="flex justify-between"><dt className="text-zinc-500">Shipments</dt><dd className="font-medium text-zinc-900">{segmentedMetrics.merchant.shipments.toLocaleString()}</dd></div>
+            <div className="flex justify-between"><dt className="text-zinc-500">Delivered</dt><dd className="font-medium text-zinc-900">{segmentedMetrics.merchant.delivered.toLocaleString()}</dd></div>
+          </dl>
         </div>
       </section>
 

@@ -5,9 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { initializePayment } from "@/app/actions/paystack";
-import { Loader2, Wallet, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { Loader2, Wallet, ArrowDownLeft, ArrowUpRight, X } from "lucide-react";
 
-type TransactionRow = { id: string; label: string; amount: number; date: string };
+type TransactionRow = {
+  id: string;
+  label: string;
+  amount: number;
+  date: string;
+  reason: string;
+  linkedShipment: string | null;
+  referenceId: string;
+};
 
 const TYPE_OPTIONS = [
   { value: "all", label: "All" },
@@ -28,6 +36,7 @@ export function WalletPageClient({
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [selectedTransaction, setSelectedTransaction] = useState<TransactionRow | null>(null);
 
   const filteredTransactions = useMemo(() => {
     let list = transactions;
@@ -158,11 +167,17 @@ export function WalletPageClient({
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-zinc-900">{row.label}</p>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTransaction(row)}
+                      className="text-left text-sm font-medium text-zinc-900 hover:text-[#5e1914]"
+                    >
+                      {row.label}
+                    </button>
                     <p className="text-xs text-zinc-500">{row.date}</p>
                   </div>
                 </div>
-                <span className={`text-sm font-medium ${row.amount >= 0 ? "text-green-600" : "text-zinc-900"}`}>
+                <span className={`text-sm font-medium ${row.amount >= 0 ? "text-green-600" : "text-red-600"}`}>
                   {row.amount >= 0 ? "+" : ""}₦{Math.abs(row.amount).toLocaleString()}
                 </span>
               </li>
@@ -231,6 +246,59 @@ export function WalletPageClient({
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {selectedTransaction && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-6"
+          onClick={() => setSelectedTransaction(null)}
+        >
+          <div
+            className="w-full max-w-md border border-zinc-100 bg-white p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold tracking-tight text-zinc-900">
+                  Transaction Details
+                </h3>
+                <p className="mt-1 text-sm text-zinc-500">{selectedTransaction.label}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedTransaction(null)}
+                className="rounded-none p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+                aria-label="Close transaction details"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <dl className="mt-6 space-y-3 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-zinc-500">Amount</dt>
+                <dd className={selectedTransaction.amount >= 0 ? "font-medium text-green-600" : "font-medium text-red-600"}>
+                  {selectedTransaction.amount >= 0 ? "+" : ""}₦{Math.abs(selectedTransaction.amount).toLocaleString()}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-zinc-500">Reason</dt>
+                <dd className="text-right font-medium text-zinc-900">{selectedTransaction.reason}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-zinc-500">Linked Shipment</dt>
+                <dd className="font-mono text-zinc-900">{selectedTransaction.linkedShipment ?? "—"}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-zinc-500">Date</dt>
+                <dd className="font-medium text-zinc-900">{selectedTransaction.date}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-zinc-500">Reference ID</dt>
+                <dd className="font-mono text-zinc-900">{selectedTransaction.referenceId}</dd>
+              </div>
+            </dl>
           </div>
         </div>
       )}

@@ -15,7 +15,15 @@ export default async function MerchantWalletPage() {
 
   const conn = await connectDB();
   let balance = DEMO_BALANCE;
-  let transactions: { id: string; label: string; amount: number; date: string }[] = DEMO_TRANSACTIONS;
+  let transactions: {
+    id: string;
+    label: string;
+    amount: number;
+    date: string;
+    reason: string;
+    linkedShipment: string | null;
+    referenceId: string;
+  }[] = DEMO_TRANSACTIONS;
 
   if (conn) {
     const [merchant, shipments] = await Promise.all([
@@ -34,6 +42,9 @@ export default async function MerchantWalletPage() {
           label: `Shipment ${s.trackingId}`,
           amount: -s.cost,
           date: formatDemoDateOnly(new Date(s.createdAt).toISOString()),
+          reason: "Wallet debit for shipment booking",
+          linkedShipment: s.trackingId,
+          referenceId: `DMXTXN-${String(s._id).slice(-6)}`,
         })),
       ];
     }

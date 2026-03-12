@@ -154,7 +154,7 @@ export async function createBookingFromPowerForm(
     const sellingPrice = cost;
     const costPrice = Math.round(sellingPrice / (1 + DEFAULT_MARKUP_PERCENT / 100));
 
-    await Shipment.create({
+    const shipmentDoc = await Shipment.create({
       merchantId: new mongoose.Types.ObjectId(session.merchantId as string),
       trackingId,
       receiverDetails: {
@@ -167,6 +167,12 @@ export async function createBookingFromPowerForm(
       costPrice,
       sellingPrice,
       status: "Pending",
+    });
+
+    console.log("[Booking Power Form] Shipment created", {
+      trackingId: shipmentDoc.trackingId,
+      merchantId: session.merchantId,
+      cost,
     });
 
     await Merchant.findByIdAndUpdate(session.merchantId, {
@@ -187,7 +193,7 @@ export async function createBookingFromPowerForm(
     const senderAddress = merchant.address ?? "";
 
     return {
-      trackingId,
+      trackingId: shipmentDoc.trackingId,
       success: `Shipment booked. Cost: ₦${cost.toLocaleString()} deducted.`,
       slip: buildSlip(trackingId, senderName, senderAddress),
     };

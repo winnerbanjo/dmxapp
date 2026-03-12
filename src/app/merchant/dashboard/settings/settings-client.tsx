@@ -21,6 +21,20 @@ export function SettingsClient({
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [branches, setBranches] = useState([
+    { id: "br-1", name: "Lagos HQ", city: "Lagos", status: "Approved" },
+    { id: "br-2", name: "Abuja Central", city: "Abuja", status: "Pending Approval" },
+  ]);
+  const [branchName, setBranchName] = useState("");
+  const [branchCity, setBranchCity] = useState("");
+  const [employees, setEmployees] = useState([
+    { id: "emp-1", fullName: "Aisha Bello", email: "aisha@dmxmerchant.com", role: "Manager", branchId: "br-1" },
+    { id: "emp-2", fullName: "Tunde Ade", email: "tunde@dmxmerchant.com", role: "Booking Officer", branchId: "br-2" },
+  ]);
+  const [employeeName, setEmployeeName] = useState("");
+  const [employeeEmail, setEmployeeEmail] = useState("");
+  const [employeeRole, setEmployeeRole] = useState("Booking Officer");
+  const [employeeBranchId, setEmployeeBranchId] = useState("br-1");
 
   async function handleGenerateKey() {
     setGenerating(true);
@@ -35,6 +49,38 @@ export function SettingsClient({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+  }
+
+  function handleCreateBranch() {
+    if (!branchName.trim() || !branchCity.trim()) return;
+    setBranches((prev) => [
+      ...prev,
+      {
+        id: `br-${Date.now()}`,
+        name: branchName.trim(),
+        city: branchCity.trim(),
+        status: "Pending Approval",
+      },
+    ]);
+    setBranchName("");
+    setBranchCity("");
+  }
+
+  function handleCreateEmployee() {
+    if (!employeeName.trim() || !employeeEmail.trim() || !employeeBranchId) return;
+    setEmployees((prev) => [
+      ...prev,
+      {
+        id: `emp-${Date.now()}`,
+        fullName: employeeName.trim(),
+        email: employeeEmail.trim(),
+        role: employeeRole,
+        branchId: employeeBranchId,
+      },
+    ]);
+    setEmployeeName("");
+    setEmployeeEmail("");
+    setEmployeeRole("Booking Officer");
   }
 
   return (
@@ -126,6 +172,140 @@ export function SettingsClient({
               className="mt-2 h-12 rounded-none border-zinc-100"
             />
           </div>
+        </div>
+      </section>
+
+      <section className="border-b border-zinc-100 pb-12">
+        <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+          Branch management
+        </h2>
+        <p className="mt-2 text-sm text-zinc-500">
+          New branches require Super Admin approval before activation.
+        </p>
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Input
+            value={branchName}
+            onChange={(e) => setBranchName(e.target.value)}
+            placeholder="Branch name"
+            className="h-11 rounded-none border-zinc-100"
+          />
+          <Input
+            value={branchCity}
+            onChange={(e) => setBranchCity(e.target.value)}
+            placeholder="City"
+            className="h-11 rounded-none border-zinc-100"
+          />
+          <Button
+            type="button"
+            onClick={handleCreateBranch}
+            className="h-11 rounded-none bg-[#5e1914] hover:bg-[#4a130f]"
+          >
+            Add Branch
+          </Button>
+        </div>
+        <div className="mt-6 overflow-hidden border border-zinc-100 bg-white">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-zinc-100 bg-zinc-50">
+                <th className="px-4 py-3 font-medium text-zinc-900">Branch</th>
+                <th className="px-4 py-3 font-medium text-zinc-900">City</th>
+                <th className="px-4 py-3 font-medium text-zinc-900">Approval</th>
+              </tr>
+            </thead>
+            <tbody>
+              {branches.map((branch) => (
+                <tr key={branch.id} className="border-b border-zinc-100 last:border-b-0">
+                  <td className="px-4 py-3 text-zinc-900">{branch.name}</td>
+                  <td className="px-4 py-3 text-zinc-700">{branch.city}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-block border px-2 py-1 text-xs font-medium ${
+                        branch.status === "Approved"
+                          ? "border-green-600 bg-green-50 text-green-700"
+                          : "border-amber-500 bg-amber-50 text-amber-700"
+                      }`}
+                    >
+                      {branch.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="border-b border-zinc-100 pb-12">
+        <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+          Employee accounts
+        </h2>
+        <p className="mt-2 text-sm text-zinc-500">
+          Create role-based employee logins and assign each user to a branch.
+        </p>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          <Input
+            value={employeeName}
+            onChange={(e) => setEmployeeName(e.target.value)}
+            placeholder="Full name"
+            className="h-11 rounded-none border-zinc-100"
+          />
+          <Input
+            value={employeeEmail}
+            onChange={(e) => setEmployeeEmail(e.target.value)}
+            placeholder="Work email"
+            className="h-11 rounded-none border-zinc-100"
+          />
+          <select
+            value={employeeRole}
+            onChange={(e) => setEmployeeRole(e.target.value)}
+            className="h-11 rounded-none border border-zinc-100 bg-white px-3 text-sm text-zinc-900"
+          >
+            <option value="Booking Officer">Booking Officer</option>
+            <option value="Tracking Officer">Tracking Officer</option>
+            <option value="Manager">Manager</option>
+          </select>
+          <select
+            value={employeeBranchId}
+            onChange={(e) => setEmployeeBranchId(e.target.value)}
+            className="h-11 rounded-none border border-zinc-100 bg-white px-3 text-sm text-zinc-900"
+          >
+            {branches.map((branch) => (
+              <option key={branch.id} value={branch.id}>
+                {branch.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <Button
+          type="button"
+          onClick={handleCreateEmployee}
+          className="mt-4 rounded-none bg-[#5e1914] hover:bg-[#4a130f]"
+        >
+          Create Employee
+        </Button>
+        <div className="mt-6 overflow-hidden border border-zinc-100 bg-white">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-zinc-100 bg-zinc-50">
+                <th className="px-4 py-3 font-medium text-zinc-900">Name</th>
+                <th className="px-4 py-3 font-medium text-zinc-900">Email</th>
+                <th className="px-4 py-3 font-medium text-zinc-900">Role</th>
+                <th className="px-4 py-3 font-medium text-zinc-900">Branch</th>
+              </tr>
+            </thead>
+            <tbody>
+              {employees.map((employee) => (
+                <tr key={employee.id} className="border-b border-zinc-100 last:border-b-0">
+                  <td className="px-4 py-3 text-zinc-900">{employee.fullName}</td>
+                  <td className="px-4 py-3 text-zinc-700">{employee.email}</td>
+                  <td className="px-4 py-3 text-zinc-900">{employee.role}</td>
+                  <td className="px-4 py-3 text-zinc-700">
+                    {branches.find((b) => b.id === employee.branchId)?.name ?? "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 

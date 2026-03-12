@@ -7,11 +7,15 @@ import { ShipmentList } from "../shipment-list";
 type Row = {
   id: string;
   trackingId: string;
+  customerName: string;
   receiverName: string;
+  destination: string;
   receiverPhone: string;
+  serviceOption: string;
   status: string;
   packageWeight: number;
   cost: number;
+  paymentStatus: string;
   createdAt: string;
 };
 
@@ -25,11 +29,13 @@ export function ShipmentsWithSearch({ shipments }: { shipments: Row[] }) {
     let list = shipments;
     if (query.trim()) {
       const q = query.trim().toLowerCase();
-      list = list.filter(
-        (s) =>
-          s.trackingId.toLowerCase().includes(q) ||
-          s.receiverName.toLowerCase().includes(q)
-      );
+        list = list.filter(
+          (s) =>
+            s.trackingId.toLowerCase().includes(q) ||
+            s.customerName.toLowerCase().includes(q) ||
+            s.receiverName.toLowerCase().includes(q) ||
+            s.destination.toLowerCase().includes(q)
+        );
     }
     if (status !== "All statuses") {
       list = list.filter((s) => s.status === status);

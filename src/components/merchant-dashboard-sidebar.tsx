@@ -9,6 +9,7 @@ import {
   Settings,
   LogOut,
   Users,
+  Calculator,
 } from "lucide-react";
 import { logoutMerchant } from "@/app/auth/logout/actions";
 
@@ -18,6 +19,7 @@ const nav = [
   { href: "/merchant/dashboard/shipments", label: "Shipments", icon: Package },
   { href: "/merchant/dashboard/customers", label: "Customers", icon: Users },
   { href: "/merchant/dashboard/wallet", label: "Wallet", icon: Wallet },
+  { href: "/merchant/dashboard/rate-checker", label: "Rate Checker", icon: Calculator },
   { href: "/merchant/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
