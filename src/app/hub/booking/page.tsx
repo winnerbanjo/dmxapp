@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { BOOKING_FROM_TASK_KEY, type HubBookingFromTask } from "@/data/demo-tasks";
 import type { ServiceType } from "@/data/booking-constants";
 import { ServiceTypeSelector } from "@/components/service-type-selector";
@@ -16,6 +17,8 @@ const PACKAGE_CATEGORY_OPTIONS = [
 ];
 
 export default function HubBookingPage() {
+  const pathname = usePathname();
+  const taskHref = pathname.startsWith("/admin") ? "/admin/tasks" : "/hub/tasks";
   const [serviceType, setServiceType] = useState<ServiceType | null>(null);
   const [fromTask, setFromTask] = useState(false);
 
@@ -77,7 +80,7 @@ export default function HubBookingPage() {
           <p className="text-sm font-medium text-[#5e1914]">Booking saved. You can return to Tasks or create another.</p>
           <div className="mt-6 flex gap-3">
             <Link
-              href="/hub/tasks"
+              href={taskHref}
               className="rounded-none border border-[#5e1914] bg-[#5e1914] px-4 py-2 text-sm font-medium text-white hover:bg-[#4a130f]"
             >
               Back to Tasks
@@ -106,7 +109,7 @@ export default function HubBookingPage() {
             <h1 className="font-sans text-2xl font-semibold tracking-tighter text-zinc-900">Booking</h1>
             <p className="mt-1 text-sm text-zinc-500">Select service type. From a task? Accept the task to open the form pre-filled.</p>
           </div>
-          <Link href="/hub/tasks" className="rounded-none border border-zinc-100 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">
+          <Link href={taskHref} className="rounded-none border border-zinc-100 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">
             ← Tasks
           </Link>
         </header>
@@ -130,7 +133,7 @@ export default function HubBookingPage() {
             {fromTask ? "Task data pre-filled. Complete and add internal note." : "Create waybill. Add internal note on receipt."}
           </p>
         </div>
-        <Link href="/hub/tasks" className="rounded-none border border-zinc-100 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">
+        <Link href={taskHref} className="rounded-none border border-zinc-100 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">
           ← Tasks
         </Link>
       </header>
@@ -306,7 +309,7 @@ export default function HubBookingPage() {
             Create waybill
           </button>
           <Link
-            href="/hub/tasks"
+            href={taskHref}
             className="rounded-none border border-zinc-200 bg-white px-6 py-3 text-sm font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]"
           >
             Cancel
