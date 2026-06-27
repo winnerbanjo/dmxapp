@@ -1,1 +1,5 @@
-export { default } from "@/app/hub/booking/page";
+import { AdminBookingFlow } from "@/components/admin-booking-flow";
+
+export default function AdminBookingPage() {
+  return <AdminBookingFlow />;
+}

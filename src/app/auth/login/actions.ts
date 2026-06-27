@@ -52,5 +52,25 @@ export async function setDemoHubSession() {
   redirect("/hub/dashboard");
 }
 
-export const startMerchantSession = setDemoMerchantSession;
-export const startHubSession = setDemoHubSession;
+function valueFromForm(formData: FormData | undefined, key: string): string {
+  const value = formData?.get(key);
+  return typeof value === "string" ? value.trim() : "";
+}
+
+export async function startMerchantSession(formData?: FormData) {
+  const email = valueFromForm(formData, "email").toLowerCase();
+  const password = valueFromForm(formData, "password");
+  if (email !== "merchant@dmx.com" || password !== "merchant123") {
+    redirect("/merchant/login?error=invalid");
+  }
+  await setDemoMerchantSession();
+}
+
+export async function startHubSession(formData?: FormData) {
+  const email = valueFromForm(formData, "email").toLowerCase();
+  const password = valueFromForm(formData, "password");
+  if (email !== "hub@dmx.com" || password !== "hub123") {
+    redirect("/hub/login?error=invalid");
+  }
+  await setDemoHubSession();
+}

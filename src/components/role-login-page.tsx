@@ -33,26 +33,38 @@ const loginContent = {
   },
 } satisfies Record<LoginMode, { eyebrow: string; title: string; body: string; action: string; href: string }>;
 
-export function RoleLoginPage({ mode }: { mode: LoginMode }) {
+export function RoleLoginPage({
+  mode,
+  error,
+}: {
+  mode: LoginMode;
+  error?: string;
+}) {
   const router = useRouter();
   const [logoError, setLogoError] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [clientError, setClientError] = useState("");
+  const [email, setEmail] = useState(
+    mode === "admin" ? "admin@dmx.com" : mode === "merchant" ? "merchant@dmx.com" : "hub@dmx.com"
+  );
+  const [password, setPassword] = useState(
+    mode === "admin" ? "password123" : mode === "merchant" ? "merchant123" : "hub123"
+  );
   const content = loginContent[mode];
 
   async function handleAdminAccess() {
     setLoading(true);
-    setError("");
+    setClientError("");
     const result = await signIn("credentials", {
-      email: "admin@dmx.com",
-      password: "password123",
+      email,
+      password,
       role: "ADMIN",
       redirect: false,
       callbackUrl: content.href,
     });
 
     if (result?.error) {
-      setError("Admin access is not available right now.");
+      setClientError("Invalid admin login.");
       setLoading(false);
       return;
     }
@@ -92,16 +104,25 @@ export function RoleLoginPage({ mode }: { mode: LoginMode }) {
 
         <div className="mt-8">
           {mode === "admin" ? (
-            <button
-              type="button"
-              onClick={handleAdminAccess}
-              disabled={loading}
-              className="w-full rounded-none bg-[#5e1914] py-4 text-sm font-medium text-white hover:bg-[#4a130f] disabled:cursor-not-allowed disabled:opacity-60"
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleAdminAccess();
+              }}
+              className="space-y-4"
             >
-              {loading ? "Opening..." : content.action}
-            </button>
+              <LoginFields email={email} password={password} onEmail={setEmail} onPassword={setPassword} />
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-none bg-[#5e1914] py-4 text-sm font-medium text-white hover:bg-[#4a130f] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? "Opening..." : content.action}
+              </button>
+            </form>
           ) : mode === "merchant" ? (
-            <form action={startMerchantSession}>
+            <form action={startMerchantSession} className="space-y-4">
+              <LoginFields email={email} password={password} onEmail={setEmail} onPassword={setPassword} />
               <button
                 type="submit"
                 className="w-full rounded-none bg-[#5e1914] py-4 text-sm font-medium text-white hover:bg-[#4a130f]"
@@ -110,7 +131,8 @@ export function RoleLoginPage({ mode }: { mode: LoginMode }) {
               </button>
             </form>
           ) : (
-            <form action={startHubSession}>
+            <form action={startHubSession} className="space-y-4">
+              <LoginFields email={email} password={password} onEmail={setEmail} onPassword={setPassword} />
               <button
                 type="submit"
                 className="w-full rounded-none bg-[#5e1914] py-4 text-sm font-medium text-white hover:bg-[#4a130f]"
@@ -121,9 +143,9 @@ export function RoleLoginPage({ mode }: { mode: LoginMode }) {
           )}
         </div>
 
-        {error ? (
+        {clientError || error === "invalid" ? (
           <p className="mt-4 border border-red-200 bg-red-50 px-3 py-2 text-center text-xs text-red-700">
-            {error}
+            {clientError || "Invalid login details."}
           </p>
         ) : null}
 
@@ -134,6 +156,51 @@ export function RoleLoginPage({ mode }: { mode: LoginMode }) {
           <Link href="/track" className="hover:text-[#5e1914]">Track</Link>
         </div>
       </main>
+    </div>
+  );
+}
+
+function LoginFields({
+  email,
+  password,
+  onEmail,
+  onPassword,
+}: {
+  email: string;
+  password: string;
+  onEmail: (value: string) => void;
+  onPassword: (value: string) => void;
+}) {
+  return (
+    <div className="space-y-4 text-left">
+      <div>
+        <label htmlFor="email" className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-zinc-500">
+          Email
+        </label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          value={email}
+          onChange={(event) => onEmail(event.target.value)}
+          className="w-full rounded-none border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none focus:border-[#5e1914] focus:ring-1 focus:ring-[#5e1914]"
+          required
+        />
+      </div>
+      <div>
+        <label htmlFor="password" className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-zinc-500">
+          Password
+        </label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          value={password}
+          onChange={(event) => onPassword(event.target.value)}
+          className="w-full rounded-none border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none focus:border-[#5e1914] focus:ring-1 focus:ring-[#5e1914]"
+          required
+        />
+      </div>
     </div>
   );
 }
