@@ -141,8 +141,9 @@ export function AdminBookingFlow() {
   }));
   const selectedRate = adjustedRates.find((rate) => rate.id === selectedRateId) ?? adjustedRates[0];
   const insuranceFee = insurance ? Math.round(parcelValue * 0.033) : 0;
+  const customsCharge = receiver.country.toLowerCase() === "nigeria" ? 0 : Math.round(parcelValue * 0.025);
   const serviceCharge = 500;
-  const total = selectedRate.amount + insuranceFee + serviceCharge;
+  const total = selectedRate.amount + insuranceFee + customsCharge + serviceCharge;
 
   function go(next: Step) {
     setStep(next);
@@ -200,7 +201,7 @@ export function AdminBookingFlow() {
               ))}
             </section>
           </div>
-          <PaymentPanel title="Payment Details" total={total} shipping={selectedRate.amount} addOns={insuranceFee} service={serviceCharge} />
+          <PaymentPanel title="Payment Details" total={total} shipping={selectedRate.amount} addOns={insuranceFee} customs={customsCharge} service={serviceCharge} />
         </div>
       </div>
     );
@@ -291,6 +292,12 @@ export function AdminBookingFlow() {
           {step === "carrier" && (
             <section>
               <PageTitle title="Select Carrier" subtitle="Choose your preferred rate." />
+              <div className="mt-6 grid gap-3 border border-zinc-100 bg-[#f7f1ef] p-5 sm:grid-cols-4">
+                <Metric label="Actual weight" value={`${actualWeight.toFixed(2)} kg`} />
+                <Metric label="Volumetric weight" value={`${volumetricWeight.toFixed(2)} kg`} />
+                <Metric label="Chargeable weight" value={`${chargeableWeight.toFixed(2)} kg`} />
+                <Metric label="Declared value" value={money(parcelValue)} />
+              </div>
               <div className="mt-6 flex items-center justify-between bg-[#f6f1ea] p-3">
                 <div className="flex gap-2">
                   <button className="rounded-none bg-zinc-900 px-4 py-2 text-sm text-white">DMX Network</button>
@@ -333,6 +340,20 @@ export function AdminBookingFlow() {
                   ))}
                 </div>
               )}
+              <div className="mt-6 border border-zinc-100 bg-white p-5">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="font-semibold text-zinc-900">Checkout add-ons</p>
+                    <p className="mt-1 text-sm text-zinc-500">Included after courier selection so the payment total is clear.</p>
+                  </div>
+                  <p className="text-right text-sm font-semibold text-[#5e1914]">Payable estimate {money(total)}</p>
+                </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <ChargePill label="Insurance fee" value={money(insuranceFee)} />
+                  <ChargePill label="Customs estimate" value={money(customsCharge)} />
+                  <ChargePill label="Service charge" value={money(serviceCharge)} />
+                </div>
+              </div>
               <div className="mt-6 bg-amber-100 p-5 text-sm text-zinc-700">
                 <p className="font-semibold text-zinc-900">Can&apos;t find a carrier?</p>
                 <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -390,7 +411,7 @@ export function AdminBookingFlow() {
           )}
         </main>
         {step === "review" ? (
-          <RightRail step={step} total={total} shipping={selectedRate.amount} addOns={insuranceFee} service={serviceCharge} onPay={() => setConfirmed(true)} />
+          <RightRail step={step} total={total} shipping={selectedRate.amount} addOns={insuranceFee} customs={customsCharge} service={serviceCharge} onPay={() => setConfirmed(true)} />
         ) : null}
       </div>
 
@@ -545,15 +566,15 @@ function AddressStep({
   );
 }
 
-function RightRail({ step, total, shipping, addOns, service, onPay }: { step: Step; total: number; shipping: number; addOns: number; service: number; onPay: () => void }) {
+function RightRail({ step, total, shipping, addOns, customs, service, onPay }: { step: Step; total: number; shipping: number; addOns: number; customs: number; service: number; onPay: () => void }) {
   if (step === "review") {
-    return <PaymentPanel title="Make Payment" total={total} shipping={shipping} addOns={addOns} service={service} onPay={onPay} />;
+    return <PaymentPanel title="Make Payment" total={total} shipping={shipping} addOns={addOns} customs={customs} service={service} onPay={onPay} />;
   }
 
   return null;
 }
 
-function PaymentPanel({ title, total, shipping, addOns, service, onPay }: { title: string; total: number; shipping: number; addOns: number; service: number; onPay?: () => void }) {
+function PaymentPanel({ title, total, shipping, addOns, customs, service, onPay }: { title: string; total: number; shipping: number; addOns: number; customs: number; service: number; onPay?: () => void }) {
   return (
     <aside className="bg-[#f7f1ef] px-8 py-10">
       <div className="sticky top-8 rounded-none bg-white p-8 shadow-sm">
@@ -562,7 +583,8 @@ function PaymentPanel({ title, total, shipping, addOns, service, onPay }: { titl
         <p className="mx-auto mt-4 w-fit bg-[#f7f1ef] px-6 py-3 text-3xl font-bold text-[#5e1914]">{money(total)}</p>
         <div className="mt-8 space-y-4 border-b border-zinc-100 pb-6 text-sm">
           <Line label="Shipping Charge" value={money(shipping)} />
-          <Line label="Add-ons" value={money(addOns)} />
+          <Line label="Insurance" value={money(addOns)} />
+          <Line label="Customs Estimate" value={money(customs)} />
           <Line label="Service Charge" value={money(service)} />
         </div>
         <Line label="Total" value={money(total)} className="mt-5 font-semibold" />
@@ -573,6 +595,24 @@ function PaymentPanel({ title, total, shipping, addOns, service, onPay }: { titl
         <button onClick={onPay} className="mt-6 w-full rounded-none bg-[#5e1914] py-4 font-semibold text-white hover:bg-[#4a130f]">Make Payment</button>
       </div>
     </aside>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className="mt-2 font-semibold text-zinc-900">{value}</p>
+    </div>
+  );
+}
+
+function ChargePill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border border-zinc-100 bg-zinc-50 p-4">
+      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className="mt-2 font-semibold text-zinc-900">{value}</p>
+    </div>
   );
 }
 

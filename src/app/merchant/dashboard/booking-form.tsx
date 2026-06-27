@@ -79,7 +79,8 @@ export function BookingForm() {
     ];
   }, [breakdown.baseShipping, breakdown.fuelSurcharge]);
   const selectedCourier = courierRates.find((rate) => rate.id === selectedCourierId) ?? courierRates[0];
-  const finalTotal = selectedCourier.amount + breakdown.insurance + breakdown.fragileFee + breakdown.vat;
+  const customsCharge = declaredNum > 500000 ? Math.round(declaredNum * 0.025) : 0;
+  const finalTotal = selectedCourier.amount + breakdown.insurance + breakdown.fragileFee + breakdown.vat + customsCharge;
 
   const handlePresetSelect = (id: PresetId) => {
     setPreset(id);
@@ -386,6 +387,11 @@ export function BookingForm() {
                 Select courier
               </p>
               <p className="mt-1 text-sm text-zinc-500 font-sans">Choose the courier rate before creating the booking.</p>
+              <div className="mt-5 grid gap-3 border border-zinc-100 bg-[#f7f1ef] p-5 sm:grid-cols-3">
+                <SummaryMetric label="Total weight" value={`${weightNum} kg`} />
+                <SummaryMetric label="Dimensions" value={`${length} x ${width} x ${height} cm`} />
+                <SummaryMetric label="Declared value" value={formatNaira(declaredNum)} />
+              </div>
               <div className="mt-5 space-y-3">
                 {courierRates.map((rate) => (
                   <button
@@ -410,6 +416,21 @@ export function BookingForm() {
                   </button>
                 ))}
               </div>
+              <div className="mt-6 border border-zinc-100 bg-zinc-50 p-5">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="font-sans font-semibold text-zinc-900">Checkout add-ons</p>
+                    <p className="mt-1 font-sans text-sm text-zinc-500">These charges are included before payment or final booking creation.</p>
+                  </div>
+                  <p className="font-sans text-sm font-semibold text-[#5e1914]">Payable {formatNaira(finalTotal)}</p>
+                </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-4">
+                  <SummaryMetric label="Insurance" value={formatNaira(breakdown.insurance)} />
+                  <SummaryMetric label="Customs estimate" value={formatNaira(customsCharge)} />
+                  <SummaryMetric label="Fragile handling" value={formatNaira(breakdown.fragileFee)} />
+                  <SummaryMetric label="VAT" value={formatNaira(breakdown.vat)} />
+                </div>
+              </div>
             </div>
             <div className="flex justify-between pt-6">
               <Button
@@ -426,6 +447,8 @@ export function BookingForm() {
               <input type="hidden" name="courierId" value={selectedCourier.id} />
               <input type="hidden" name="courierName" value={selectedCourier.name} />
               <input type="hidden" name="courierPrice" value={selectedCourier.amount} />
+              <input type="hidden" name="customsCharge" value={customsCharge} />
+              <input type="hidden" name="payableTotal" value={finalTotal} />
               {premiumInsurance && <input type="hidden" name="premiumInsurance" value="on" />}
               {fragile && <input type="hidden" name="fragile" value="on" />}
               {signatureRequired && <input type="hidden" name="signatureRequired" value="on" />}
@@ -458,6 +481,10 @@ export function BookingForm() {
             <dt>Insurance</dt>
             <dd>{formatNaira(breakdown.insurance)}</dd>
           </div>
+          <div className="flex justify-between text-zinc-700">
+            <dt>Customs estimate</dt>
+            <dd>{formatNaira(customsCharge)}</dd>
+          </div>
           {breakdown.fragileFee > 0 && (
             <div className="flex justify-between text-zinc-700">
               <dt>Fragile handling</dt>
@@ -476,6 +503,15 @@ export function BookingForm() {
           </div>
         </div>
       </aside>
+    </div>
+  );
+}
+
+function SummaryMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="font-sans text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className="mt-2 font-sans text-sm font-semibold text-zinc-900">{value}</p>
     </div>
   );
 }

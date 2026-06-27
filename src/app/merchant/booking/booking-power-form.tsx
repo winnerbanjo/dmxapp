@@ -149,7 +149,8 @@ export function BookingPowerForm({
   }, [baseFare, express, isInternational]);
 
   const selectedCourier = courierRates.find((rate) => rate.id === selectedCourierId) ?? courierRates[0];
-  const total = selectedCourier.amount + insurance;
+  const customsCharge = isInternational && itemValueNum > 0 ? Math.round(itemValueNum * 0.035) : 0;
+  const total = selectedCourier.amount + insurance + customsCharge;
 
   const [showSlip, setShowSlip] = useState(false);
   useEffect(() => {
@@ -164,6 +165,9 @@ export function BookingPowerForm({
           <input type="hidden" name="courierId" value={selectedCourier.id} />
           <input type="hidden" name="courierName" value={selectedCourier.name} />
           <input type="hidden" name="courierPrice" value={selectedCourier.amount} />
+          <input type="hidden" name="insuranceFee" value={insurance} />
+          <input type="hidden" name="customsCharge" value={customsCharge} />
+          <input type="hidden" name="payableTotal" value={total} />
 
           {state?.error && (
             <p className="mb-6 text-sm text-red-600" role="alert">
@@ -456,6 +460,12 @@ export function BookingPowerForm({
             <section>
               <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500">Select courier</h2>
               <p className="mt-1 text-sm text-zinc-500">Final courier rates are shown here before payment or waybill generation.</p>
+              <div className="mt-5 grid gap-3 border border-zinc-100 bg-[#f7f1ef] p-5 sm:grid-cols-4">
+                <QuoteMetric label="Total weight" value={weightNum > 0 ? `${weightNum} kg` : "Pending"} />
+                <QuoteMetric label="Declared value" value={`₦${declaredNum.toLocaleString("en-NG")}`} />
+                <QuoteMetric label="Customs value" value={isInternational ? `₦${itemValueNum.toLocaleString("en-NG")}` : "Not required"} />
+                <QuoteMetric label="Destination" value={isInternational ? receiverCountry || "International" : assignedHub} />
+              </div>
               <div className="mt-6 space-y-3">
                 {courierRates.map((rate) => (
                   <button
@@ -483,6 +493,20 @@ export function BookingPowerForm({
                     </div>
                   </button>
                 ))}
+              </div>
+              <div className="mt-6 border border-zinc-100 bg-white p-5">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="font-medium text-zinc-900">Checkout add-ons</p>
+                    <p className="mt-1 text-sm text-zinc-500">Insurance and customs estimate are factored into the payable total.</p>
+                  </div>
+                  <p className="text-sm font-semibold text-[#5e1914]">Payable ₦{total.toLocaleString("en-NG")}</p>
+                </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <QuoteMetric label="Insurance fee" value={`₦${insurance.toLocaleString("en-NG")}`} />
+                  <QuoteMetric label="Customs estimate" value={`₦${customsCharge.toLocaleString("en-NG")}`} />
+                  <QuoteMetric label="Courier selected" value={selectedCourier.name} />
+                </div>
               </div>
             </section>
           </div>
@@ -513,6 +537,10 @@ export function BookingPowerForm({
               <span className="text-zinc-600">Insurance</span>
               <span className="font-medium text-zinc-900">₦{insurance.toLocaleString()}</span>
             </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-600">Customs estimate</span>
+              <span className="font-medium text-zinc-900">₦{customsCharge.toLocaleString()}</span>
+            </div>
             <div className="flex justify-between border-t border-zinc-100 pt-4">
               <span className="text-sm font-medium text-zinc-900">Total</span>
               <span className="text-xl font-semibold tracking-tighter text-[#5e1914]">
@@ -537,5 +565,14 @@ export function BookingPowerForm({
         />
       )}
     </>
+  );
+}
+
+function QuoteMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className="mt-2 text-sm font-semibold text-zinc-900">{value}</p>
+    </div>
   );
 }

@@ -36,6 +36,7 @@ export default function HubBookingPage() {
   const [deliveryStructured, setDeliveryStructured] = useState<StructuredAddressValue>(emptyStructuredAddress());
   const [notes, setNotes] = useState("");
   const [internalNote, setInternalNote] = useState("");
+  const [packageWeight, setPackageWeight] = useState("2");
   const [itemValueCustoms, setItemValueCustoms] = useState("");
   const [hsCode, setHsCode] = useState("");
   const [idPassportNumber, setIdPassportNumber] = useState("");
@@ -72,10 +73,12 @@ export default function HubBookingPage() {
 
   const isInternational = serviceType === "international";
   const showForm = serviceType !== null;
+  const weightNum = Math.max(0.1, Number(packageWeight) || 0);
+  const customsValue = Math.max(0, Number(itemValueCustoms) || 0);
   const courierRates: CourierRate[] = useMemo(() => {
     const serviceFactor = serviceType === "international" ? 2.4 : serviceType === "nationwide" ? 1.35 : serviceType === "movers" ? 4.2 : 1;
-    const customsFactor = Number(itemValueCustoms || 0) > 0 ? 1.08 : 1;
-    const base = Math.round(6800 * serviceFactor * customsFactor);
+    const customsFactor = customsValue > 0 ? 1.08 : 1;
+    const base = Math.round((6800 + weightNum * 900) * serviceFactor * customsFactor);
 
     return [
       {
@@ -112,8 +115,11 @@ export default function HubBookingPage() {
         amount: Math.round(base * 1.02 + 900),
       },
     ];
-  }, [itemValueCustoms, serviceType]);
+  }, [customsValue, serviceType, weightNum]);
   const selectedCourier = courierRates.find((rate) => rate.id === selectedCourierId) ?? courierRates[0];
+  const insuranceFee = customsValue > 0 ? Math.round(customsValue * 0.01) : Math.round(selectedCourier.amount * 0.005);
+  const customsCharge = isInternational && customsValue > 0 ? Math.round(customsValue * 0.035) : 0;
+  const payableTotal = selectedCourier.amount + insuranceFee + customsCharge;
 
   if (submitted) {
     return (
@@ -252,6 +258,24 @@ export default function HubBookingPage() {
           </div>
         </section>
 
+        <section>
+          <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500">Package</h2>
+          <div className="mt-4">
+            <label htmlFor="packageWeight" className="block text-xs font-medium uppercase tracking-wider text-zinc-500">Package weight (kg)</label>
+            <input
+              id="packageWeight"
+              name="packageWeight"
+              type="number"
+              min="0.1"
+              step="0.01"
+              value={packageWeight}
+              onChange={(e) => setPackageWeight(e.target.value)}
+              className="mt-2 w-full rounded-none border border-zinc-200 bg-white px-4 py-3 font-sans text-sm text-zinc-900 focus:border-[#5e1914] focus:outline-none focus:ring-1 focus:ring-[#5e1914]"
+              required
+            />
+          </div>
+        </section>
+
         {isInternational && (
           <section>
             <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500">International (Customs)</h2>
@@ -331,6 +355,14 @@ export default function HubBookingPage() {
           <input type="hidden" name="courierId" value={selectedCourier.id} />
           <input type="hidden" name="courierName" value={selectedCourier.name} />
           <input type="hidden" name="courierPrice" value={selectedCourier.amount} />
+          <input type="hidden" name="insuranceFee" value={insuranceFee} />
+          <input type="hidden" name="customsCharge" value={customsCharge} />
+          <input type="hidden" name="payableTotal" value={payableTotal} />
+          <div className="mt-5 grid gap-3 border border-zinc-100 bg-[#f7f1ef] p-5 sm:grid-cols-3">
+            <HubQuoteMetric label="Total weight" value={`${weightNum} kg`} />
+            <HubQuoteMetric label="Service type" value={serviceType ?? "Pending"} />
+            <HubQuoteMetric label="Partner" value={DEMO_PARTNERS.find((p) => p.id === fulfillmentPartnerId)?.name ?? "DMX"} />
+          </div>
           <div className="mt-5 space-y-3">
             {courierRates.map((rate) => (
               <button
@@ -357,6 +389,20 @@ export default function HubBookingPage() {
                 </div>
               </button>
             ))}
+          </div>
+          <div className="mt-6 border border-zinc-100 bg-white p-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="font-medium text-zinc-900">Checkout add-ons</p>
+                <p className="mt-1 text-sm text-zinc-500">Insurance and possible customs are included before waybill creation.</p>
+              </div>
+              <p className="text-sm font-semibold text-[#5e1914]">Payable ₦{payableTotal.toLocaleString("en-NG")}</p>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <HubQuoteMetric label="Insurance fee" value={`₦${insuranceFee.toLocaleString("en-NG")}`} />
+              <HubQuoteMetric label="Customs estimate" value={`₦${customsCharge.toLocaleString("en-NG")}`} />
+              <HubQuoteMetric label="Courier selected" value={selectedCourier.name} />
+            </div>
           </div>
         </section>
 
@@ -402,6 +448,15 @@ export default function HubBookingPage() {
           </Link>
         </div>
       </form>
+    </div>
+  );
+}
+
+function HubQuoteMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className="mt-2 text-sm font-semibold text-zinc-900">{value}</p>
     </div>
   );
 }
