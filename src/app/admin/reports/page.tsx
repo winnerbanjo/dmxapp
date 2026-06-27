@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Download } from "lucide-react";
 
 const ADMIN_REPORT_ROWS = [

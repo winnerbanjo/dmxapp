@@ -146,26 +146,31 @@ export default function AdminDashboardPage() {
               );
             })}
           </section>
-
-          <section className="mt-7 overflow-hidden bg-[#5e1914] px-8 py-9 text-white">
-            <div className="flex flex-wrap items-center justify-between gap-6">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/70">DMX Control Layer</p>
-                <h2 className="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">Run every shipment from one admin view</h2>
-                <p className="mt-3 max-w-2xl text-lg text-white/80">Monitor revenue, courier rates, merchant activity, hub movement, wallet exposure, and delivery outcomes without switching branches.</p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="bg-white/10 p-4">
-                  <p className="text-sm text-white/70">Revenue</p>
-                  <p className="mt-2 text-2xl font-semibold">{money(revenue)}</p>
-                </div>
-                <div className="bg-white/10 p-4">
-                  <p className="text-sm text-white/70">Gross Profit</p>
-                  <p className="mt-2 text-2xl font-semibold">{money(profit)}</p>
-                </div>
-              </div>
-            </div>
-          </section>
+{/* Financial Summary */}
+<section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+  <div className="border border-zinc-100 bg-white p-5 shadow-sm">
+    <p className="text-sm text-zinc-500">Revenue</p>
+    <p className="mt-2 text-2xl font-semibold text-zinc-900">{money(revenue)}</p>
+  </div>
+  <div className="border border-zinc-100 bg-white p-5 shadow-sm">
+    <p className="text-sm text-zinc-500">Gross Profit</p>
+    <p className="mt-2 text-2xl font-semibold text-zinc-900">{money(profit)}</p>
+  </div>
+  <div className="border border-zinc-100 bg-white p-5 shadow-sm">
+    <p className="text-sm text-zinc-500">Net Profit</p>
+    <p className="mt-2 text-2xl font-semibold text-zinc-900">{money(profit)}</p>
+  </div>
+  <div className="border border-zinc-100 bg-white p-5 shadow-sm">
+    <p className="text-sm text-zinc-500">Net Profit Margin %</p>
+    <p className="mt-2 text-2xl font-semibold text-[#5e1914]">
+      {revenue > 0 ? Math.round((profit / revenue) * 100) : 0}%
+    </p>
+  </div>
+  <div className="border border-zinc-100 bg-white p-5 shadow-sm">
+    <p className="text-sm text-zinc-500">Net Expense</p>
+    <p className="mt-2 text-2xl font-semibold text-zinc-900">{money(0)}</p>
+  </div>
+</section>
 
           <section className="mt-8 border-t border-zinc-200 pt-7">
             <div className="flex items-center justify-between gap-4">
