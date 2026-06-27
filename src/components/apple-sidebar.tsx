@@ -16,6 +16,7 @@ import {
   BarChart3,
   Shield,
   ClipboardList,
+  BookOpen,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -95,6 +96,8 @@ const adminNav = [
   { href: "/admin/merchants", label: "Merchants", icon: Package },
   { href: "/admin/shipments", label: "Shipments", icon: History },
   { href: "/admin/customers", label: "Customers", icon: Users },
+  { href: "/admin/address-book", label: "Address Book", icon: BookOpen },
+  { href: "/admin/insights", label: "Insights", icon: BarChart3 },
   { href: "/admin/pricing", label: "Pricing Engine", icon: DollarSign },
   { href: "/admin/reports", label: "Reports", icon: BarChart3 },
   { href: "/admin/users", label: "User Control", icon: Shield },

@@ -82,7 +82,7 @@ const baseRates: Rate[] = [
   { id: "dhl", name: "DHL Express", service: "Express Worldwide", pickup: "Within 1 business day", delivery: "Within 2 business days", amount: 236874.94, tags: ["Pickup", "Dropoff"], recommended: true },
   { id: "fedex-priority", name: "FedEx", service: "International Priority", pickup: "Within 3 business days", delivery: "Within 4 business days", amount: 197863.7, tags: ["Pickup", "Dropoff"] },
   { id: "fedex-economy", name: "FedEx", service: "International Economy", pickup: "Within 3 business days", delivery: "Within 4 business days", amount: 186022.61, tags: ["Pickup"] },
-  { id: "terminal", name: "Terminal Express", service: "Express Shipping", pickup: "Within 1 business day", delivery: "Within 2 business days", amount: 187320.94, tags: ["Pickup"] },
+  { id: "dmx-express", name: "DMX Express", service: "Express Shipping", pickup: "Within 1 business day", delivery: "Within 2 business days", amount: 187320.94, tags: ["Pickup"] },
   { id: "aramax", name: "Aramex", service: "Standard", pickup: "Within 2 business days", delivery: "Within 2 business days", amount: 169285.53, tags: ["Dropoff"] },
   { id: "parcel", name: "Parcels Express", service: "Express Delivery via DPD", pickup: "Drop-off only", delivery: "Within 5 business days", amount: 150000, tags: ["Dropoff"] },
 ];
@@ -293,7 +293,7 @@ export function AdminBookingFlow() {
               <PageTitle title="Select Carrier" subtitle="Choose your preferred rate." />
               <div className="mt-6 flex items-center justify-between bg-[#f6f1ea] p-3">
                 <div className="flex gap-2">
-                  <button className="rounded-none bg-zinc-900 px-4 py-2 text-sm text-white">Terminal</button>
+                  <button className="rounded-none bg-zinc-900 px-4 py-2 text-sm text-white">DMX Network</button>
                   <button className="rounded-none bg-white px-4 py-2 text-sm text-zinc-700">Personal Accounts</button>
                 </div>
                 <div className="flex items-center gap-3">
@@ -352,7 +352,7 @@ export function AdminBookingFlow() {
                 <div className="flex items-center justify-between px-5 py-6">
                   <div className="flex items-center gap-3">
                     <ShieldCheck className="h-5 w-5 text-[#5e1914]" />
-                    <span className="font-medium text-zinc-800">Terminal Africa</span>
+                    <span className="font-medium text-zinc-800">DMX Protection</span>
                   </div>
                   <div className="flex items-center gap-6">
                     <span className="text-xl font-bold text-zinc-900">{money(insuranceFee)}</span>
