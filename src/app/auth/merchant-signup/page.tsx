@@ -74,7 +74,7 @@ export default function MerchantSignupPage() {
 
         <p className="mt-10 text-center text-xs text-zinc-400">
           Already have an account?{" "}
-          <Link href="/auth/login" className="text-[#5e1914] hover:underline">
+          <Link href="/merchant/login" className="text-[#5e1914] hover:underline">
             Sign in
           </Link>
         </p>

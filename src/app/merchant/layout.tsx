@@ -14,9 +14,9 @@ export default async function MerchantLayout({
 
   return (
     <div className="flex h-screen flex-col bg-white md:flex-row">
-      <MerchantMobileNav email={session?.email ?? "Demo"} isAdmin={!!isAdmin} />
+      <MerchantMobileNav email={session?.email ?? "Merchant"} isAdmin={!!isAdmin} />
       <MerchantDashboardSidebar
-        email={session?.email ?? "Demo"}
+        email={session?.email ?? "Merchant"}
         isAdmin={!!isAdmin}
       />
       <main className="flex-1 overflow-auto bg-white px-4 py-8 md:px-8 md:py-12 lg:px-16 lg:py-16">

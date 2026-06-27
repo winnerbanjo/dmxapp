@@ -21,10 +21,11 @@ export const authOptions: NextAuthOptions = {
         const password = credentials.password ?? "";
         const roleFromClient = credentials.role as Role | undefined;
 
-        // Demo bypass: fixed credentials, no DB required for immediate access
+        // Demo bypass (gate with DISABLE_DEMO=true in production)
         const DEMO_ADMIN = "admin@dmx.com";
         const DEMO_PASSWORD = "password123";
-        if (email === DEMO_ADMIN && password === DEMO_PASSWORD) {
+        const demoDisabled = process.env.DISABLE_DEMO === "true";
+        if (!demoDisabled && email === DEMO_ADMIN && password === DEMO_PASSWORD) {
           try {
             let user = await prisma.user.findUnique({ where: { email: DEMO_ADMIN } });
             if (!user) {
@@ -81,7 +82,7 @@ export const authOptions: NextAuthOptions = {
     },
   },
   pages: {
-    signIn: "/auth/login",
+    signIn: "/admin/login",
   },
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,

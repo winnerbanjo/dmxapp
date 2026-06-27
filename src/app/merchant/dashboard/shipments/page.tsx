@@ -6,7 +6,7 @@ import { DEMO_SHIPMENTS } from "./demo-shipments";
 
 export default async function MerchantShipmentsPage() {
   const session = await getSession();
-  if (!session?.merchantId || !session.isVerified) redirect("/auth/login");
+  if (!session?.merchantId || !session.isVerified) redirect("/merchant/login");
 
   const list = DEMO_SHIPMENTS.map((d) => ({
     id: d.id,

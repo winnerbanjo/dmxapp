@@ -7,7 +7,7 @@ import { SettingsClient } from "./settings-client";
 export default async function MerchantSettingsPage() {
   const session = await getSession();
   if (!session?.merchantId || !session.isVerified) {
-    redirect("/auth/login");
+    redirect("/merchant/login");
   }
 
   const conn = await connectDB();

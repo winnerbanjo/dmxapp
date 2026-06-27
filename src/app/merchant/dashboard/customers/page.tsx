@@ -5,7 +5,7 @@ import { MerchantCustomersTable } from "./customers-table";
 
 export default async function MerchantCustomersPage() {
   const session = await getSession();
-  if (!session?.merchantId || !session.isVerified) redirect("/auth/login");
+  if (!session?.merchantId || !session.isVerified) redirect("/merchant/login");
 
   return (
     <div className="mx-auto max-w-5xl">

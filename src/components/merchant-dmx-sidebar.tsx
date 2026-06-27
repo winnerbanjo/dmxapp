@@ -48,7 +48,7 @@ export function MerchantSidebar() {
       <div className="border-t border-[#5e1914]/30 p-2">
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/auth/login" })}
+          onClick={() => signOut({ callbackUrl: "/merchant/login" })}
           className="flex w-full items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-white"
         >
           <LogOut className="h-4 w-4" />

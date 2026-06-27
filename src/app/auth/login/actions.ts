@@ -51,3 +51,6 @@ export async function setDemoHubSession() {
   });
   redirect("/hub/dashboard");
 }
+
+export const startMerchantSession = setDemoMerchantSession;
+export const startHubSession = setDemoHubSession;

@@ -13,6 +13,8 @@ import {
   CheckSquare,
   DollarSign,
   Truck,
+  BarChart3,
+  Shield,
   ClipboardList,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
@@ -75,7 +77,7 @@ export function MerchantAppleSidebar() {
       <div className="border-t border-zinc-200 p-4">
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/auth/login" })}
+          onClick={() => signOut({ callbackUrl: "/merchant/login" })}
           className="flex w-full items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
         >
           <LogOut strokeWidth={1} className="h-4 w-4" />
@@ -94,6 +96,8 @@ const adminNav = [
   { href: "/admin/shipments", label: "Shipments", icon: History },
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/pricing", label: "Pricing Engine", icon: DollarSign },
+  { href: "/admin/reports", label: "Reports", icon: BarChart3 },
+  { href: "/admin/users", label: "User Control", icon: Shield },
   { href: "/admin/partners", label: "Partners", icon: Truck },
 ];
 
@@ -145,7 +149,7 @@ export function AdminAppleSidebar() {
       <div className="border-t border-zinc-200 p-4">
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/auth/login" })}
+          onClick={() => signOut({ callbackUrl: "/admin/login" })}
           className="flex w-full items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
         >
           <LogOut strokeWidth={1} className="h-4 w-4" />
