@@ -165,7 +165,7 @@ export function AdminBookingFlow() {
             </div>
             <p className="mt-2 text-sm text-zinc-500">Confirmed · Jun 27, 2026 12:38 PM</p>
           </div>
-          <button className="rounded-none bg-[#f7931a] px-5 py-3 text-sm font-semibold text-white">Track shipment</button>
+          <button className="rounded-none bg-[#5e1914] px-5 py-3 text-sm font-semibold text-white hover:bg-[#4a130f]">Track shipment</button>
         </div>
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
           <div className="space-y-6">
@@ -182,8 +182,8 @@ export function AdminBookingFlow() {
                   <p className="text-sm text-zinc-500">{selectedRate.service}</p>
                 </div>
                 <div className="ml-auto flex gap-2">
-                  <button className="grid h-9 w-9 place-items-center bg-[#f7931a] text-white"><Phone className="h-4 w-4" /></button>
-                  <button className="grid h-9 w-9 place-items-center bg-[#f7931a] text-white"><Mail className="h-4 w-4" /></button>
+                  <button className="grid h-9 w-9 place-items-center bg-[#5e1914] text-white"><Phone className="h-4 w-4" /></button>
+                  <button className="grid h-9 w-9 place-items-center bg-[#5e1914] text-white"><Mail className="h-4 w-4" /></button>
                 </div>
               </div>
             </section>
@@ -194,7 +194,7 @@ export function AdminBookingFlow() {
               </p>
               {items.map((item, index) => (
                 <p key={item.name} className="mt-3 text-sm text-zinc-600">
-                  <span className="font-semibold text-[#b56b00]">PARCEL {index + 1}</span><br />
+                  <span className="font-semibold text-[#5e1914]">PARCEL {index + 1}</span><br />
                   {item.name}, {item.quantity} piece, {item.weight}kg, {money(item.value)}, {item.origin}
                 </p>
               ))}
@@ -208,7 +208,7 @@ export function AdminBookingFlow() {
 
   return (
     <div className="min-h-full bg-white">
-      <div className="grid min-h-full lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className={`grid min-h-full ${step === "review" ? "lg:grid-cols-[minmax(0,1fr)_380px]" : ""}`}>
         <main className="px-8 py-10 lg:px-14">
           <StepNav step={step} setStep={go} />
           {step === "sender" && (
@@ -243,7 +243,7 @@ export function AdminBookingFlow() {
               </div>
               <div className="mt-8 rounded-none bg-[#f6f1ea] p-5">
                 <div className="flex items-center justify-between">
-                  <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900"><Package className="h-5 w-5 text-[#f7931a]" /> Parcel 1</h2>
+                  <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900"><Package className="h-5 w-5 text-[#5e1914]" /> Parcel 1</h2>
                   <span className="border border-emerald-300 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700">
                     Volumetric weight = {volumetricWeight}kg
                   </span>
@@ -257,7 +257,7 @@ export function AdminBookingFlow() {
                 <div className="mt-6 rounded-none bg-white">
                   <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-4">
                     <h3 className="font-semibold text-zinc-900">Items</h3>
-                    <button type="button" onClick={() => setShowItemModal(true)} className="text-sm font-semibold text-[#c87b13]">+ Add Item</button>
+                    <button type="button" onClick={() => setShowItemModal(true)} className="text-sm font-semibold text-[#5e1914]">+ Add Item</button>
                   </div>
                   {items.map((item) => (
                     <div key={item.name} className="flex items-center justify-between px-4 py-4">
@@ -298,7 +298,7 @@ export function AdminBookingFlow() {
                 </div>
                 <div className="flex items-center gap-3">
                   <button className="border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-700">Sort by: Default</button>
-                  <button onClick={() => setRatesLoaded(true)} className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-[#c87b13]"><RefreshCw className="h-4 w-4" /> Get rates</button>
+                  <button onClick={() => setRatesLoaded(true)} className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-[#5e1914]"><RefreshCw className="h-4 w-4" /> Get rates</button>
                 </div>
               </div>
               {!ratesLoaded ? (
@@ -315,7 +315,7 @@ export function AdminBookingFlow() {
                         setSelectedRateId(rate.id);
                         setDropoffOpen(true);
                       }}
-                      className={`w-full border bg-white p-4 text-left ${selectedRateId === rate.id ? "border-[#f7931a]" : "border-zinc-100"}`}
+                      className={`w-full border bg-white p-4 text-left ${selectedRateId === rate.id ? "border-[#5e1914]" : "border-zinc-100"}`}
                     >
                       <div className="flex items-center gap-4">
                         <span className="grid h-9 w-9 place-items-center bg-yellow-400 text-[10px] font-bold text-zinc-900">{rate.name.slice(0, 3).toUpperCase()}</span>
@@ -326,7 +326,7 @@ export function AdminBookingFlow() {
                         </div>
                         <div className="ml-auto text-right">
                           <p className="text-xl font-bold text-zinc-900">{money(rate.amount)}</p>
-                          <span className="mt-2 inline-block border border-[#c87b13] px-4 py-2 text-sm font-semibold text-[#c87b13]">Select</span>
+                          <span className="mt-2 inline-block border border-[#5e1914] px-4 py-2 text-sm font-semibold text-[#5e1914]">Select</span>
                         </div>
                       </div>
                     </button>
@@ -351,12 +351,12 @@ export function AdminBookingFlow() {
                 <div className="bg-[#f6f1ea] px-5 py-4 font-semibold text-zinc-900">Insurance</div>
                 <div className="flex items-center justify-between px-5 py-6">
                   <div className="flex items-center gap-3">
-                    <ShieldCheck className="h-5 w-5 text-[#f7931a]" />
+                    <ShieldCheck className="h-5 w-5 text-[#5e1914]" />
                     <span className="font-medium text-zinc-800">Terminal Africa</span>
                   </div>
                   <div className="flex items-center gap-6">
                     <span className="text-xl font-bold text-zinc-900">{money(insuranceFee)}</span>
-                    <button onClick={() => setInsurance((value) => !value)} className="rounded-none bg-[#f7931a] px-5 py-3 text-sm font-semibold text-white">
+                    <button onClick={() => setInsurance((value) => !value)} className="rounded-none bg-[#5e1914] px-5 py-3 text-sm font-semibold text-white hover:bg-[#4a130f]">
                       {insurance ? "Added" : "Add"}
                     </button>
                   </div>
@@ -389,7 +389,9 @@ export function AdminBookingFlow() {
             </section>
           )}
         </main>
-        <RightRail step={step} total={total} shipping={selectedRate.amount} addOns={insuranceFee} service={serviceCharge} onPay={() => setConfirmed(true)} />
+        {step === "review" ? (
+          <RightRail step={step} total={total} shipping={selectedRate.amount} addOns={insuranceFee} service={serviceCharge} onPay={() => setConfirmed(true)} />
+        ) : null}
       </div>
 
       {showItemModal && (
@@ -412,8 +414,8 @@ export function AdminBookingFlow() {
               <NumberField label="Item Value" value={itemDraft.value} onChange={(value) => setItemDraft((item) => ({ ...item, value }))} />
             </div>
             <div className="grid grid-cols-2 gap-3 border-t border-zinc-100 p-6">
-              <button onClick={() => setShowItemModal(false)} className="border border-[#c87b13] px-4 py-3 font-semibold text-[#c87b13]">Cancel</button>
-              <button onClick={saveItem} className="bg-[#f7931a] px-4 py-3 font-semibold text-white">Save item</button>
+              <button onClick={() => setShowItemModal(false)} className="border border-[#5e1914] px-4 py-3 font-semibold text-[#5e1914]">Cancel</button>
+              <button onClick={saveItem} className="bg-[#5e1914] px-4 py-3 font-semibold text-white hover:bg-[#4a130f]">Save item</button>
             </div>
           </div>
         </div>
@@ -435,8 +437,8 @@ export function AdminBookingFlow() {
                   {branches.map((branch, index) => (
                     <button key={branch.name} onClick={() => setSelectedBranch(index)} className="flex w-full items-center gap-4 border border-zinc-100 p-4 text-left">
                       <MapPin className="h-5 w-5 text-zinc-500" />
-                      <span className="flex-1 text-sm text-zinc-700">{branch.name}<br /><span className="text-xs text-[#c87b13]">{branch.distance}</span></span>
-                      <span className={`border px-4 py-2 text-sm font-semibold ${selectedBranch === index ? "border-[#f7931a] bg-[#f7931a] text-white" : "border-[#c87b13] text-[#c87b13]"}`}>{selectedBranch === index ? "Selected" : "Select"}</span>
+                      <span className="flex-1 text-sm text-zinc-700">{branch.name}<br /><span className="text-xs text-[#5e1914]">{branch.distance}</span></span>
+                      <span className={`border px-4 py-2 text-sm font-semibold ${selectedBranch === index ? "border-[#5e1914] bg-[#5e1914] text-white" : "border-[#5e1914] text-[#5e1914]"}`}>{selectedBranch === index ? "Selected" : "Select"}</span>
                     </button>
                   ))}
                 </div>
@@ -444,7 +446,7 @@ export function AdminBookingFlow() {
             </div>
             <div className="grid grid-cols-2 gap-3 border-t border-zinc-100 p-6">
               <button onClick={() => setDropoffOpen(false)} className="border border-zinc-200 px-4 py-3 font-semibold text-zinc-700">Cancel</button>
-              <button onClick={() => setDropoffOpen(false)} className="bg-[#f7931a] px-4 py-3 font-semibold text-white">Save and continue</button>
+              <button onClick={() => setDropoffOpen(false)} className="bg-[#5e1914] px-4 py-3 font-semibold text-white hover:bg-[#4a130f]">Save and continue</button>
             </div>
           </div>
         </div>
@@ -458,8 +460,8 @@ function StepNav({ step, setStep }: { step: Step; setStep: (step: Step) => void 
     <div className="mb-10 flex flex-wrap items-center gap-2 text-sm">
       {steps.map((item, index) => (
         <div key={item.id} className="flex items-center gap-2">
-          <button onClick={() => setStep(item.id)} className={item.id === step ? "font-semibold text-[#c87b13]" : "text-zinc-500"}>{item.label}</button>
-          {index < steps.length - 1 ? <span className="h-px w-6 bg-[#c87b13]" /> : null}
+          <button onClick={() => setStep(item.id)} className={item.id === step ? "font-semibold text-[#5e1914]" : "text-zinc-500"}>{item.label}</button>
+          {index < steps.length - 1 ? <span className="h-px w-6 bg-[#b98d87]" /> : null}
         </div>
       ))}
     </div>
@@ -503,8 +505,8 @@ function AddressStep({
           ["hub", "Use Hub Address"],
           ["new", "Enter New Address"],
         ].map(([id, label]) => (
-          <button key={id} onClick={() => setMode(id as "book" | "hub" | "new")} className={`border p-5 text-left font-semibold ${mode === id ? "border-[#f7931a] bg-[#fff3e4] text-zinc-900" : "border-zinc-100 text-zinc-700"}`}>
-            <span className={`mb-5 block h-4 w-4 rounded-full border ${mode === id ? "border-[#f7931a] bg-[#f7931a]" : "border-zinc-200"}`} />
+          <button key={id} onClick={() => setMode(id as "book" | "hub" | "new")} className={`border p-5 text-left font-semibold ${mode === id ? "border-[#5e1914] bg-[#f7f1ef] text-zinc-900" : "border-zinc-100 text-zinc-700"}`}>
+            <span className={`mb-5 block h-4 w-4 rounded-full border ${mode === id ? "border-[#5e1914] bg-[#5e1914]" : "border-zinc-200"}`} />
             {label}
           </button>
         ))}
@@ -532,8 +534,8 @@ function AddressStep({
           <div className="p-5">
             <AddressPreview address={address} />
             <div className="mt-6 flex gap-3">
-              <button className="border border-[#c87b13] px-5 py-3 font-semibold text-[#c87b13]">Edit this address</button>
-              <button className="border border-[#c87b13] px-5 py-3 font-semibold text-[#c87b13]">Use another address</button>
+              <button className="border border-[#5e1914] px-5 py-3 font-semibold text-[#5e1914]">Edit this address</button>
+              <button className="border border-[#5e1914] px-5 py-3 font-semibold text-[#5e1914]">Use another address</button>
             </div>
           </div>
         </div>
@@ -548,24 +550,16 @@ function RightRail({ step, total, shipping, addOns, service, onPay }: { step: St
     return <PaymentPanel title="Make Payment" total={total} shipping={shipping} addOns={addOns} service={service} onPay={onPay} />;
   }
 
-  return (
-    <aside className="hidden bg-[#ffe3cc] px-10 py-10 lg:block">
-      <div className="sticky top-8 space-y-8">
-        <button className="ml-auto grid h-9 w-9 place-items-center rounded-full bg-white text-zinc-400">×</button>
-        <AdPanel title="Ship with USPS within the USA" body="Book deliveries across states inside the USA." tone="blue" />
-        <AdPanel title="We've Got You Covered." body="Our team is on the line to ensure your shipments stay on track." tone="orange" />
-      </div>
-    </aside>
-  );
+  return null;
 }
 
 function PaymentPanel({ title, total, shipping, addOns, service, onPay }: { title: string; total: number; shipping: number; addOns: number; service: number; onPay?: () => void }) {
   return (
-    <aside className="bg-[#ffe3cc] px-8 py-10">
+    <aside className="bg-[#f7f1ef] px-8 py-10">
       <div className="sticky top-8 rounded-none bg-white p-8 shadow-sm">
-        <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-[#ffd089] text-4xl">☺</div>
+        <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-[#efe1de] text-4xl text-[#5e1914]">☺</div>
         <h2 className="mt-5 text-center text-2xl font-semibold text-zinc-900">{title}</h2>
-        <p className="mx-auto mt-4 w-fit bg-[#fff3e4] px-6 py-3 text-3xl font-bold text-[#f7931a]">{money(total)}</p>
+        <p className="mx-auto mt-4 w-fit bg-[#f7f1ef] px-6 py-3 text-3xl font-bold text-[#5e1914]">{money(total)}</p>
         <div className="mt-8 space-y-4 border-b border-zinc-100 pb-6 text-sm">
           <Line label="Shipping Charge" value={money(shipping)} />
           <Line label="Add-ons" value={money(addOns)} />
@@ -576,18 +570,9 @@ function PaymentPanel({ title, total, shipping, addOns, service, onPay }: { titl
           <p className="text-xs text-zinc-500">Wallet Balance</p>
           <p className="mt-3 text-2xl font-bold text-zinc-900">₦38,265.40 <span className="ml-2 bg-red-50 px-2 py-1 text-xs font-medium text-red-500">Low balance</span></p>
         </div>
-        <button onClick={onPay} className="mt-6 w-full rounded-none bg-[#f7931a] py-4 font-semibold text-white">Make Payment</button>
+        <button onClick={onPay} className="mt-6 w-full rounded-none bg-[#5e1914] py-4 font-semibold text-white hover:bg-[#4a130f]">Make Payment</button>
       </div>
     </aside>
-  );
-}
-
-function AdPanel({ title, body, tone }: { title: string; body: string; tone: "blue" | "orange" }) {
-  return (
-    <div className={`p-8 text-white ${tone === "blue" ? "bg-[#005891]" : "bg-[#f26a21]"}`}>
-      <p className="text-3xl font-semibold leading-tight">{title}</p>
-      <p className="mt-4 text-lg opacity-90">{body}</p>
-    </div>
   );
 }
 
@@ -595,7 +580,7 @@ function FooterActions({ onPrevious, onNext, disabled }: { onPrevious?: () => vo
   return (
     <div className="mt-10 flex justify-between">
       {onPrevious ? <button onClick={onPrevious} className="border border-zinc-200 px-6 py-3 font-semibold text-zinc-700">Previous</button> : <span />}
-      {onNext ? <button disabled={disabled} onClick={onNext} className="bg-[#f7931a] px-8 py-3 font-semibold text-white disabled:bg-zinc-200">Save and Continue</button> : null}
+      {onNext ? <button disabled={disabled} onClick={onNext} className="bg-[#5e1914] px-8 py-3 font-semibold text-white hover:bg-[#4a130f] disabled:bg-zinc-200">Save and Continue</button> : null}
     </div>
   );
 }
@@ -638,7 +623,7 @@ function TextField({ label, value, onChange, className = "" }: { label: string; 
   return (
     <label className={`block ${className}`}>
       <span className="mb-2 block text-sm font-medium text-zinc-700">{label}</span>
-      <input value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-none border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#f7931a] focus:ring-1 focus:ring-[#f7931a]" />
+      <input value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-none border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#5e1914] focus:ring-1 focus:ring-[#5e1914]" />
     </label>
   );
 }
@@ -647,7 +632,7 @@ function NumberField({ label, value, onChange }: { label: string; value: number;
   return (
     <label className="block">
       <span className="mb-2 block text-sm font-medium text-zinc-700">{label}</span>
-      <input type="number" value={value} onChange={(event) => onChange(Number(event.target.value))} className="w-full rounded-none border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#f7931a] focus:ring-1 focus:ring-[#f7931a]" />
+      <input type="number" value={value} onChange={(event) => onChange(Number(event.target.value))} className="w-full rounded-none border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#5e1914] focus:ring-1 focus:ring-[#5e1914]" />
     </label>
   );
 }
@@ -656,7 +641,7 @@ function SelectField({ label, value, onChange, options }: { label: string; value
   return (
     <label className="block">
       <span className="mb-2 block text-sm font-medium text-zinc-700">{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-none border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#f7931a] focus:ring-1 focus:ring-[#f7931a]">
+      <select value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-none border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#5e1914] focus:ring-1 focus:ring-[#5e1914]">
         {options.map((option) => <option key={option}>{option}</option>)}
       </select>
     </label>
@@ -666,8 +651,8 @@ function SelectField({ label, value, onChange, options }: { label: string; value
 function RadioLine({ checked, onClick, label }: { checked: boolean; onClick: () => void; label: string }) {
   return (
     <button onClick={onClick} className="flex items-center gap-3 text-left text-sm text-zinc-700">
-      <span className={`grid h-4 w-4 place-items-center rounded-full border ${checked ? "border-[#f7931a]" : "border-zinc-300"}`}>
-        {checked ? <span className="h-2 w-2 rounded-full bg-[#f7931a]" /> : null}
+      <span className={`grid h-4 w-4 place-items-center rounded-full border ${checked ? "border-[#5e1914]" : "border-zinc-300"}`}>
+        {checked ? <span className="h-2 w-2 rounded-full bg-[#5e1914]" /> : null}
       </span>
       {label}
     </button>
