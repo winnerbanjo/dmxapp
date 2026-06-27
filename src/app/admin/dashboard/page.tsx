@@ -10,7 +10,6 @@ import {
   Search,
   ShieldCheck,
   Truck,
-  Wallet,
   XCircle,
 } from "lucide-react";
 import { ADMIN_DEMO_SHIPMENTS } from "@/data/demo-shipments";
@@ -125,18 +124,7 @@ export default function AdminDashboardPage() {
               <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">Hello, Admin!</h1>
               <p className="mt-1 text-sm text-zinc-500">Consider the whole network monitored.</p>
             </div>
-            <div className="flex min-w-[280px] items-center justify-between gap-5 border border-zinc-100 bg-white p-5 shadow-sm">
-              <div>
-                <p className="flex items-center gap-2 text-sm text-zinc-400">
-                  <Wallet className="h-4 w-4 text-[#5e1914]" />
-                  Operating Float
-                </p>
-                <p className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900">{money(walletFloat)}</p>
-              </div>
-              <Link href="/admin/reports" className="bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-[#5e1914]">
-                Top up
-              </Link>
-            </div>
+
           </section>
 
           <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">

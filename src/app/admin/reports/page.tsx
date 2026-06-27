@@ -30,14 +30,25 @@ export default function AdminReportsPage() {
   const [selectedCustomer, setSelectedCustomer] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [reportData, setReportData] = useState(ADMIN_REPORT_ROWS);
+  const [reportData, setReportData] = useState([] as any[]);
+
+  // Load live report data
+  useEffect(() => {
+    fetch("/api/admin/reports")
+      .then((res) => res.json())
+      .then((data) => setReportData(data))
+      .catch((err) => console.error("Failed to load reports", err));
+  }, []);
 
   const summary = useMemo(() => {
-    const revenue = ADMIN_REPORT_ROWS.reduce((sum, row) => sum + row.revenue, 0);
-    const shipments = ADMIN_REPORT_ROWS.reduce((sum, row) => sum + row.shipments, 0);
-    const avgMargin = Math.round(ADMIN_REPORT_ROWS.reduce((sum, row) => sum + row.margin, 0) / ADMIN_REPORT_ROWS.length);
+    const revenue = reportData.reduce((sum, row) => sum + (row.revenue ?? 0), 0);
+    const shipments = reportData.reduce((sum, row) => sum + (row.shipments ?? 0), 0);
+    const avgMargin =
+      reportData.length > 0
+        ? Math.round(reportData.reduce((sum, row) => sum + (row.margin ?? 0), 0) / reportData.length)
+        : 0;
     return { revenue, shipments, avgMargin };
-  }, []);
+  }, [reportData]);
 
   return (
     <div className="mx-auto max-w-5xl bg-white px-8 py-8">

@@ -182,7 +182,8 @@ model Shipment {
   updatedAt       DateTime       @updatedAt @map("updated_at")
   deliveredAt     DateTime?      @map("delivered_at")
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employeeId     String?   @map("employee_id")
+  employee       User?     @relation("EmployeeShipments", fields: [employeeId], references: [id])
   transactions  Transaction[]
 
   @@index([userId])
