@@ -29,31 +29,50 @@ const PACKAGE_CATEGORY_OPTIONS = [
 ] as const;
 
 type Sender = { businessName: string; email: string; address: string };
+type CourierRate = {
+  id: string;
+  name: string;
+  service: string;
+  eta: string;
+  pickup: string;
+  amount: number;
+  recommended?: boolean;
+};
 
 export function BookingPowerForm({
   sender,
   serviceType,
   merchantId,
+  initialValues,
   onBack,
 }: {
   sender: Sender;
   serviceType: ServiceType;
   merchantId?: string;
+  initialValues?: {
+    receiverName?: string;
+    receiverPhone?: string;
+    destination?: string;
+    weight?: string;
+    declaredValue?: string;
+    receiverCountry?: string;
+  };
   onBack: () => void;
 }) {
-  const [receiverName, setReceiverName] = useState("");
-  const [receiverPhone, setReceiverPhone] = useState("");
+  const [receiverName, setReceiverName] = useState(initialValues?.receiverName ?? "");
+  const [receiverPhone, setReceiverPhone] = useState(initialValues?.receiverPhone ?? "");
   const [receiverStructured, setReceiverStructured] = useState<StructuredAddressValue>(emptyStructuredAddress());
   const [assignedHub, setAssignedHub] = useState(DESTINATION_HUB_OPTIONS[0].value);
-  const [weight, setWeight] = useState("");
+  const [weight, setWeight] = useState(initialValues?.weight ?? "");
   const [itemCategory, setItemCategory] = useState("");
-  const [declaredValue, setDeclaredValue] = useState("");
+  const [declaredValue, setDeclaredValue] = useState(initialValues?.declaredValue ?? "");
   const [serviceLevel, setServiceLevel] = useState<"Standard" | "Express">("Standard");
   const [itemValueCustoms, setItemValueCustoms] = useState("");
   const [hsCode, setHsCode] = useState("");
   const [idPassportNumber, setIdPassportNumber] = useState("");
   const [packageCategory, setPackageCategory] = useState("");
-  const [receiverCountry, setReceiverCountry] = useState("");
+  const [receiverCountry, setReceiverCountry] = useState(initialValues?.receiverCountry ?? "");
+  const [selectedCourierId, setSelectedCourierId] = useState("dmx");
 
   const isInternational = serviceType === "international";
 
@@ -71,24 +90,66 @@ export function BookingPowerForm({
   const origin = extractCityFromAddress(sender.address) || "Lagos";
   const destination = getPricingCityFromAddress(receiverStructured.state, receiverStructured.lga);
   const zone = getZoneFromCountry(receiverCountry);
-  const { baseFare, insurance, total } = useMemo(() => {
+  const { baseFare, insurance } = useMemo(() => {
     let baseFareVal = 0;
-    let totalVal = 0;
     if (weightNum > 0) {
       if (isInternational && zone) {
         const cost = getCarrierCostForZone(weightNum, zone);
         baseFareVal = applyMarkup(cost, DEFAULT_PROFIT_MARKUP_PERCENT);
-        totalVal = express ? Math.round(baseFareVal * 1.5) : baseFareVal;
       } else {
         const quote = getQuote(origin, destination, weightNum, express, merchantId);
         baseFareVal = quote.baseFare;
-        totalVal = quote.total;
       }
     }
     const ins = declaredNum > 0 ? Math.round(declaredNum * 0.005) : 0;
     const intlIns = isInternational && itemValueNum > 0 ? Math.round(itemValueNum * 0.01) : 0;
-    return { baseFare: baseFareVal, insurance: ins + intlIns, total: totalVal + ins + intlIns };
+    return { baseFare: baseFareVal, insurance: ins + intlIns };
   }, [weightNum, express, declaredNum, isInternational, itemValueNum, origin, destination, zone, getQuote, merchantId]);
+
+  const courierRates: CourierRate[] = useMemo(() => {
+    const tierFactor = express ? 1.35 : 1;
+    const internationalFactor = isInternational ? 1.45 : 1;
+    const base = Math.max(0, Math.round(baseFare * tierFactor * internationalFactor));
+
+    return [
+      {
+        id: "dmx",
+        name: "DMX Express",
+        service: express ? "Priority Network" : "Standard Network",
+        eta: express ? "1-2 business days" : "2-4 business days",
+        pickup: "Pickup or hub drop-off",
+        amount: base,
+        recommended: true,
+      },
+      {
+        id: "dhl",
+        name: "DHL Express",
+        service: "Express Worldwide",
+        eta: isInternational ? "2-5 business days" : "1-3 business days",
+        pickup: "Pickup available",
+        amount: Math.round(base * 1.18 + 1200),
+      },
+      {
+        id: "fedex",
+        name: "FedEx",
+        service: express ? "International Priority" : "International Economy",
+        eta: isInternational ? "3-6 business days" : "2-5 business days",
+        pickup: "Pickup available",
+        amount: Math.round(base * 1.08 + 1800),
+      },
+      {
+        id: "ups",
+        name: "UPS",
+        service: "Saver",
+        eta: isInternational ? "4-7 business days" : "3-5 business days",
+        pickup: "Drop-off preferred",
+        amount: Math.round(base * 0.98 + 900),
+      },
+    ];
+  }, [baseFare, express, isInternational]);
+
+  const selectedCourier = courierRates.find((rate) => rate.id === selectedCourierId) ?? courierRates[0];
+  const total = selectedCourier.amount + insurance;
 
   const [showSlip, setShowSlip] = useState(false);
   useEffect(() => {
@@ -100,6 +161,9 @@ export function BookingPowerForm({
       <div className="mt-12 flex gap-0">
         <form id="booking-power-form" action={formAction} className="min-w-0 flex-1 pr-12">
           <input type="hidden" name="serviceType" value={serviceType} />
+          <input type="hidden" name="courierId" value={selectedCourier.id} />
+          <input type="hidden" name="courierName" value={selectedCourier.name} />
+          <input type="hidden" name="courierPrice" value={selectedCourier.amount} />
 
           {state?.error && (
             <p className="mb-6 text-sm text-red-600" role="alert">
@@ -209,6 +273,11 @@ export function BookingPowerForm({
                   required={true}
                   onHubSuggest={handleReceiverHubSuggest}
                 />
+                {initialValues?.destination && !receiverStructured.streetAddress && (
+                  <p className="text-xs text-zinc-500">
+                    Quote selection destination: {initialValues.destination}. Complete the full structured address below for dispatch.
+                  </p>
+                )}
                 <div>
                   <Label htmlFor="assignedHub" className="text-zinc-700">Destination Hub (Smart mapping)</Label>
                   <select
@@ -355,7 +424,7 @@ export function BookingPowerForm({
             </section>
 
             {/* Service level */}
-            <section>
+            <section className="border-b border-zinc-100 pb-12">
               <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500">Service level</h2>
               <div className="mt-6 flex gap-4">
                 <label className="flex flex-1 cursor-pointer items-center rounded-none border border-zinc-100 bg-white p-6">
@@ -382,6 +451,40 @@ export function BookingPowerForm({
                 </label>
               </div>
             </section>
+
+            {/* Courier selection */}
+            <section>
+              <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500">Select courier</h2>
+              <p className="mt-1 text-sm text-zinc-500">Final courier rates are shown here before payment or waybill generation.</p>
+              <div className="mt-6 space-y-3">
+                {courierRates.map((rate) => (
+                  <button
+                    key={rate.id}
+                    type="button"
+                    disabled={weightNum <= 0}
+                    onClick={() => setSelectedCourierId(rate.id)}
+                    className={`w-full border bg-white p-5 text-left transition-colors ${
+                      selectedCourier.id === rate.id ? "border-[#5e1914] bg-[#f7f1ef]" : "border-zinc-100 hover:border-[#5e1914]"
+                    } ${weightNum <= 0 ? "cursor-not-allowed opacity-50" : ""}`}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-semibold text-zinc-900">{rate.name}</p>
+                          {rate.recommended ? <span className="bg-[#5e1914] px-2 py-1 text-xs font-semibold text-white">Recommended</span> : null}
+                        </div>
+                        <p className="mt-1 text-sm text-zinc-500">{rate.service}</p>
+                        <p className="mt-2 text-xs text-zinc-500">ETA: {rate.eta} · {rate.pickup}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs uppercase tracking-wider text-zinc-400">Courier price</p>
+                        <p className="mt-1 text-xl font-semibold tracking-tight text-[#5e1914]">₦{rate.amount.toLocaleString("en-NG")}</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
           </div>
 
           <div className="mt-12">
@@ -395,16 +498,16 @@ export function BookingPowerForm({
           <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 font-sans">Live quote</p>
           <div className="mt-6 space-y-4 rounded-none border border-zinc-100 bg-zinc-50 p-6 font-sans">
             <div className="flex justify-between text-sm">
-              <span className="text-zinc-600">Base rate</span>
-              <span className="font-medium text-zinc-900">₦{Math.round(baseFare * 0.7).toLocaleString()}</span>
+              <span className="text-zinc-600">Selected courier</span>
+              <span className="font-medium text-zinc-900">{selectedCourier.name}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-zinc-600">Fuel surcharge</span>
-              <span className="font-medium text-zinc-900">₦{Math.round(baseFare * 0.2).toLocaleString()}</span>
+              <span className="text-zinc-600">Courier price</span>
+              <span className="font-medium text-zinc-900">₦{selectedCourier.amount.toLocaleString("en-NG")}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-zinc-600">Security fee</span>
-              <span className="font-medium text-zinc-900">₦{Math.round(baseFare * 0.1).toLocaleString()}</span>
+              <span className="text-zinc-600">Service tier</span>
+              <span className="font-medium text-zinc-900">{serviceLevel}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-zinc-600">Insurance</span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -15,6 +15,16 @@ const PACKAGE_CATEGORY_OPTIONS = [
   { value: "personal", label: "Personal" },
   { value: "commercial", label: "Commercial" },
 ];
+
+type CourierRate = {
+  id: string;
+  name: string;
+  service: string;
+  eta: string;
+  pickup: string;
+  amount: number;
+  recommended?: boolean;
+};
 
 export default function HubBookingPage() {
   const pathname = usePathname();
@@ -33,6 +43,7 @@ export default function HubBookingPage() {
   const [idPassportNumber, setIdPassportNumber] = useState("");
   const [packageCategory, setPackageCategory] = useState("");
   const [fulfillmentPartnerId, setFulfillmentPartnerId] = useState<string>("dmx-internal");
+  const [selectedCourierId, setSelectedCourierId] = useState("dmx");
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
@@ -63,6 +74,48 @@ export default function HubBookingPage() {
 
   const isInternational = serviceType === "international";
   const showForm = serviceType !== null;
+  const courierRates: CourierRate[] = useMemo(() => {
+    const serviceFactor = serviceType === "international" ? 2.4 : serviceType === "nationwide" ? 1.35 : serviceType === "movers" ? 4.2 : 1;
+    const customsFactor = Number(itemValueCustoms || 0) > 0 ? 1.08 : 1;
+    const base = Math.round(6800 * serviceFactor * customsFactor);
+
+    return [
+      {
+        id: "dmx",
+        name: "DMX Express",
+        service: "Managed Network",
+        eta: serviceType === "international" ? "3-7 business days" : "1-3 business days",
+        pickup: "Hub intake or pickup",
+        amount: base,
+        recommended: true,
+      },
+      {
+        id: "dhl",
+        name: "DHL Express",
+        service: "Express Worldwide",
+        eta: serviceType === "international" ? "2-5 business days" : "1-3 business days",
+        pickup: "Pickup available",
+        amount: Math.round(base * 1.22 + 1500),
+      },
+      {
+        id: "fedex",
+        name: "FedEx",
+        service: "Priority",
+        eta: serviceType === "international" ? "3-6 business days" : "2-4 business days",
+        pickup: "Pickup available",
+        amount: Math.round(base * 1.12 + 1800),
+      },
+      {
+        id: "ups",
+        name: "UPS",
+        service: "Saver",
+        eta: serviceType === "international" ? "4-7 business days" : "2-5 business days",
+        pickup: "Drop-off preferred",
+        amount: Math.round(base * 1.02 + 900),
+      },
+    ];
+  }, [itemValueCustoms, serviceType]);
+  const selectedCourier = courierRates.find((rate) => rate.id === selectedCourierId) ?? courierRates[0];
 
   if (submitted) {
     return (
@@ -272,6 +325,41 @@ export default function HubBookingPage() {
           <p className="mt-1 text-xs text-zinc-500">
             Select who will handle this shipment. External partners (DHL, GIG, FedEx) will show a &quot;Track via Partner&quot; link on the waybill.
           </p>
+        </section>
+
+        <section>
+          <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500">Select courier and rate</h2>
+          <p className="mt-1 text-xs text-zinc-500">Final courier selection happens here before the waybill is created.</p>
+          <input type="hidden" name="courierId" value={selectedCourier.id} />
+          <input type="hidden" name="courierName" value={selectedCourier.name} />
+          <input type="hidden" name="courierPrice" value={selectedCourier.amount} />
+          <div className="mt-5 space-y-3">
+            {courierRates.map((rate) => (
+              <button
+                key={rate.id}
+                type="button"
+                onClick={() => setSelectedCourierId(rate.id)}
+                className={`w-full border bg-white p-4 text-left transition-colors ${
+                  selectedCourier.id === rate.id ? "border-[#5e1914] bg-[#f7f1ef]" : "border-zinc-100 hover:border-[#5e1914]"
+                }`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium text-zinc-900">{rate.name}</p>
+                      {rate.recommended ? <span className="bg-[#5e1914] px-2 py-1 text-xs font-semibold text-white">Recommended</span> : null}
+                    </div>
+                    <p className="mt-1 text-sm text-zinc-500">{rate.service}</p>
+                    <p className="mt-2 text-xs text-zinc-500">ETA: {rate.eta} · {rate.pickup}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs uppercase tracking-wider text-zinc-400">Price</p>
+                    <p className="mt-1 text-xl font-semibold tracking-tight text-[#5e1914]">₦{rate.amount.toLocaleString("en-NG")}</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
         </section>
 
         <section>

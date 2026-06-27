@@ -43,8 +43,8 @@ const steps: { id: Step; label: string }[] = [
   { id: "sender", label: "Sender" },
   { id: "receiver", label: "Receiver" },
   { id: "items", label: "Items" },
-  { id: "carrier", label: "Carrier" },
   { id: "addons", label: "Add-ons" },
+  { id: "carrier", label: "Carrier" },
   { id: "review", label: "Review" },
 ];
 
@@ -285,7 +285,7 @@ export function AdminBookingFlow() {
                   ))}
                 </div>
               </div>
-              <FooterActions onPrevious={() => go("receiver")} onNext={() => go("carrier")} />
+              <FooterActions onPrevious={() => go("receiver")} onNext={() => go("addons")} />
             </section>
           )}
           {step === "carrier" && (
@@ -341,7 +341,7 @@ export function AdminBookingFlow() {
                   <li>Try refreshing after checking receiver and parcel details.</li>
                 </ul>
               </div>
-              <FooterActions onPrevious={() => go("items")} onNext={() => go("addons")} disabled={!ratesLoaded} />
+              <FooterActions onPrevious={() => go("addons")} onNext={() => go("review")} disabled={!ratesLoaded} />
             </section>
           )}
           {step === "addons" && (
@@ -363,7 +363,7 @@ export function AdminBookingFlow() {
                 </div>
               </div>
               <p className="mt-6 text-right text-sm font-semibold text-zinc-700">Total Add-ons {money(insuranceFee)}</p>
-              <FooterActions onPrevious={() => go("carrier")} onNext={() => go("review")} />
+              <FooterActions onPrevious={() => go("items")} onNext={() => go("carrier")} />
             </section>
           )}
           {step === "review" && (
