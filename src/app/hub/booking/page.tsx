@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { BOOKING_FROM_TASK_KEY, type HubBookingFromTask } from "@/data/demo-tasks";
 import type { ServiceType } from "@/data/booking-constants";
 import { ServiceTypeSelector } from "@/components/service-type-selector";
@@ -27,8 +26,7 @@ type CourierRate = {
 };
 
 export default function HubBookingPage() {
-  const pathname = usePathname();
-  const taskHref = pathname.startsWith("/admin") ? "/admin/tasks" : "/hub/tasks";
+  const taskHref = "/hub/tasks";
   const [serviceType, setServiceType] = useState<ServiceType | null>(null);
   const [fromTask, setFromTask] = useState(false);
 

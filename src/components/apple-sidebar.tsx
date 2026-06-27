@@ -10,7 +10,6 @@ import {
   History,
   LogOut,
   Users,
-  CheckSquare,
   DollarSign,
   Truck,
   BarChart3,
@@ -92,7 +91,6 @@ export function MerchantAppleSidebar() {
 const adminNav = [
   { href: "/admin/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/booking", label: "Booking", icon: ClipboardList },
-  { href: "/admin/tasks", label: "Task Dispatcher", icon: CheckSquare },
   { href: "/admin/merchants", label: "Merchants", icon: Package },
   { href: "/admin/shipments", label: "Shipments", icon: History },
   { href: "/admin/customers", label: "Customers", icon: Users },
