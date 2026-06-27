@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { RoleLoginPage } from "@/components/role-login-page";
 
 export default function HomePage() {
-  redirect("/admin/dashboard");
+  return <RoleLoginPage mode="admin" />;
 }
