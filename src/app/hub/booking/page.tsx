@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { BOOKING_FROM_TASK_KEY, type HubBookingFromTask } from "@/data/demo-tasks";
@@ -15,7 +15,18 @@ const PACKAGE_CATEGORY_OPTIONS = [
   { value: "commercial", label: "Commercial" },
 ];
 
+type CourierRate = {
+  id: string;
+  name: string;
+  service: string;
+  eta: string;
+  pickup: string;
+  amount: number;
+  recommended?: boolean;
+};
+
 export default function HubBookingPage() {
+  const taskHref = "/hub/tasks";
   const [serviceType, setServiceType] = useState<ServiceType | null>(null);
   const [fromTask, setFromTask] = useState(false);
 
@@ -25,11 +36,13 @@ export default function HubBookingPage() {
   const [deliveryStructured, setDeliveryStructured] = useState<StructuredAddressValue>(emptyStructuredAddress());
   const [notes, setNotes] = useState("");
   const [internalNote, setInternalNote] = useState("");
+  const [packageWeight, setPackageWeight] = useState("2");
   const [itemValueCustoms, setItemValueCustoms] = useState("");
   const [hsCode, setHsCode] = useState("");
   const [idPassportNumber, setIdPassportNumber] = useState("");
   const [packageCategory, setPackageCategory] = useState("");
   const [fulfillmentPartnerId, setFulfillmentPartnerId] = useState<string>("dmx-internal");
+  const [selectedCourierId, setSelectedCourierId] = useState("dmx");
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
@@ -60,6 +73,53 @@ export default function HubBookingPage() {
 
   const isInternational = serviceType === "international";
   const showForm = serviceType !== null;
+  const weightNum = Math.max(0.1, Number(packageWeight) || 0);
+  const customsValue = Math.max(0, Number(itemValueCustoms) || 0);
+  const courierRates: CourierRate[] = useMemo(() => {
+    const serviceFactor = serviceType === "international" ? 2.4 : serviceType === "nationwide" ? 1.35 : serviceType === "movers" ? 4.2 : 1;
+    const customsFactor = customsValue > 0 ? 1.08 : 1;
+    const base = Math.round((6800 + weightNum * 900) * serviceFactor * customsFactor);
+
+    return [
+      {
+        id: "dmx",
+        name: "DMX Express",
+        service: "Managed Network",
+        eta: serviceType === "international" ? "3-7 business days" : "1-3 business days",
+        pickup: "Hub intake or pickup",
+        amount: base,
+        recommended: true,
+      },
+      {
+        id: "dhl",
+        name: "DHL Express",
+        service: "Express Worldwide",
+        eta: serviceType === "international" ? "2-5 business days" : "1-3 business days",
+        pickup: "Pickup available",
+        amount: Math.round(base * 1.22 + 1500),
+      },
+      {
+        id: "fedex",
+        name: "FedEx",
+        service: "Priority",
+        eta: serviceType === "international" ? "3-6 business days" : "2-4 business days",
+        pickup: "Pickup available",
+        amount: Math.round(base * 1.12 + 1800),
+      },
+      {
+        id: "ups",
+        name: "UPS",
+        service: "Saver",
+        eta: serviceType === "international" ? "4-7 business days" : "2-5 business days",
+        pickup: "Drop-off preferred",
+        amount: Math.round(base * 1.02 + 900),
+      },
+    ];
+  }, [customsValue, serviceType, weightNum]);
+  const selectedCourier = courierRates.find((rate) => rate.id === selectedCourierId) ?? courierRates[0];
+  const insuranceFee = customsValue > 0 ? Math.round(customsValue * 0.01) : Math.round(selectedCourier.amount * 0.005);
+  const customsCharge = isInternational && customsValue > 0 ? Math.round(customsValue * 0.035) : 0;
+  const payableTotal = selectedCourier.amount + insuranceFee + customsCharge;
 
   if (submitted) {
     return (
@@ -77,7 +137,7 @@ export default function HubBookingPage() {
           <p className="text-sm font-medium text-[#5e1914]">Booking saved. You can return to Tasks or create another.</p>
           <div className="mt-6 flex gap-3">
             <Link
-              href="/hub/tasks"
+              href={taskHref}
               className="rounded-none border border-[#5e1914] bg-[#5e1914] px-4 py-2 text-sm font-medium text-white hover:bg-[#4a130f]"
             >
               Back to Tasks
@@ -106,7 +166,7 @@ export default function HubBookingPage() {
             <h1 className="font-sans text-2xl font-semibold tracking-tighter text-zinc-900">Booking</h1>
             <p className="mt-1 text-sm text-zinc-500">Select service type. From a task? Accept the task to open the form pre-filled.</p>
           </div>
-          <Link href="/hub/tasks" className="rounded-none border border-zinc-100 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">
+          <Link href={taskHref} className="rounded-none border border-zinc-100 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">
             ← Tasks
           </Link>
         </header>
@@ -130,7 +190,7 @@ export default function HubBookingPage() {
             {fromTask ? "Task data pre-filled. Complete and add internal note." : "Create waybill. Add internal note on receipt."}
           </p>
         </div>
-        <Link href="/hub/tasks" className="rounded-none border border-zinc-100 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">
+        <Link href={taskHref} className="rounded-none border border-zinc-100 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">
           ← Tasks
         </Link>
       </header>
@@ -194,6 +254,24 @@ export default function HubBookingPage() {
               namePrefix="delivery"
               showMapPreview={true}
               required={false}
+            />
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500">Package</h2>
+          <div className="mt-4">
+            <label htmlFor="packageWeight" className="block text-xs font-medium uppercase tracking-wider text-zinc-500">Package weight (kg)</label>
+            <input
+              id="packageWeight"
+              name="packageWeight"
+              type="number"
+              min="0.1"
+              step="0.01"
+              value={packageWeight}
+              onChange={(e) => setPackageWeight(e.target.value)}
+              className="mt-2 w-full rounded-none border border-zinc-200 bg-white px-4 py-3 font-sans text-sm text-zinc-900 focus:border-[#5e1914] focus:outline-none focus:ring-1 focus:ring-[#5e1914]"
+              required
             />
           </div>
         </section>
@@ -272,6 +350,63 @@ export default function HubBookingPage() {
         </section>
 
         <section>
+          <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500">Select courier and rate</h2>
+          <p className="mt-1 text-xs text-zinc-500">Final courier selection happens here before the waybill is created.</p>
+          <input type="hidden" name="courierId" value={selectedCourier.id} />
+          <input type="hidden" name="courierName" value={selectedCourier.name} />
+          <input type="hidden" name="courierPrice" value={selectedCourier.amount} />
+          <input type="hidden" name="insuranceFee" value={insuranceFee} />
+          <input type="hidden" name="customsCharge" value={customsCharge} />
+          <input type="hidden" name="payableTotal" value={payableTotal} />
+          <div className="mt-5 grid gap-3 border border-zinc-100 bg-[#f7f1ef] p-5 sm:grid-cols-3">
+            <HubQuoteMetric label="Total weight" value={`${weightNum} kg`} />
+            <HubQuoteMetric label="Service type" value={serviceType ?? "Pending"} />
+            <HubQuoteMetric label="Partner" value={DEMO_PARTNERS.find((p) => p.id === fulfillmentPartnerId)?.name ?? "DMX"} />
+          </div>
+          <div className="mt-5 space-y-3">
+            {courierRates.map((rate) => (
+              <button
+                key={rate.id}
+                type="button"
+                onClick={() => setSelectedCourierId(rate.id)}
+                className={`w-full border bg-white p-4 text-left transition-colors ${
+                  selectedCourier.id === rate.id ? "border-[#5e1914] bg-[#f7f1ef]" : "border-zinc-100 hover:border-[#5e1914]"
+                }`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium text-zinc-900">{rate.name}</p>
+                      {rate.recommended ? <span className="bg-[#5e1914] px-2 py-1 text-xs font-semibold text-white">Recommended</span> : null}
+                    </div>
+                    <p className="mt-1 text-sm text-zinc-500">{rate.service}</p>
+                    <p className="mt-2 text-xs text-zinc-500">ETA: {rate.eta} · {rate.pickup}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs uppercase tracking-wider text-zinc-400">Price</p>
+                    <p className="mt-1 text-xl font-semibold tracking-tight text-[#5e1914]">₦{rate.amount.toLocaleString("en-NG")}</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="mt-6 border border-zinc-100 bg-white p-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="font-medium text-zinc-900">Checkout add-ons</p>
+                <p className="mt-1 text-sm text-zinc-500">Insurance and possible customs are included before waybill creation.</p>
+              </div>
+              <p className="text-sm font-semibold text-[#5e1914]">Payable ₦{payableTotal.toLocaleString("en-NG")}</p>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <HubQuoteMetric label="Insurance fee" value={`₦${insuranceFee.toLocaleString("en-NG")}`} />
+              <HubQuoteMetric label="Customs estimate" value={`₦${customsCharge.toLocaleString("en-NG")}`} />
+              <HubQuoteMetric label="Courier selected" value={selectedCourier.name} />
+            </div>
+          </div>
+        </section>
+
+        <section>
           <label htmlFor="notes" className="block text-xs font-medium uppercase tracking-wider text-zinc-500">Notes (Special Instructions)</label>
           <textarea
             id="notes"
@@ -306,13 +441,22 @@ export default function HubBookingPage() {
             Create waybill
           </button>
           <Link
-            href="/hub/tasks"
+            href={taskHref}
             className="rounded-none border border-zinc-200 bg-white px-6 py-3 text-sm font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]"
           >
             Cancel
           </Link>
         </div>
       </form>
+    </div>
+  );
+}
+
+function HubQuoteMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className="mt-2 text-sm font-semibold text-zinc-900">{value}</p>
     </div>
   );
 }

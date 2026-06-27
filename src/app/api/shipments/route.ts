@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     }
     const data = parsed.data;
 
-    // Simple mock pricing: NGN 500/kg local, 2000/kg international
+    // Pricing: NGN 500/kg local, 2000/kg international (move to PricingRates table for production)
     const ratePerKg = data.type === "LOCAL" ? 500 : 2000;
     const priceAmount = ratePerKg * data.weightKg;
 
@@ -67,9 +67,15 @@ export async function POST(req: Request) {
       },
     });
 
+    console.log("[Shipments API] Shipment created", {
+      id: shipment.id,
+      trackingNumber: shipment.trackingNumber,
+      userId: shipment.userId,
+      type: shipment.type,
+    });
     return NextResponse.json(shipment);
   } catch (e) {
-    console.error(e);
+    console.error("[Shipments API] Create error:", e);
     return NextResponse.json({ message: "Failed to create shipment" }, { status: 500 });
   }
 }

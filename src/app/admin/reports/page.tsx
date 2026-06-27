@@ -26,6 +26,11 @@ function exportAdminCsv() {
 export default function AdminReportsPage() {
   const [scope, setScope] = useState("system");
   const [period, setPeriod] = useState("monthly");
+  const [customers, setCustomers] = useState([]);
+  const [selectedCustomer, setSelectedCustomer] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [reportData, setReportData] = useState(ADMIN_REPORT_ROWS);
 
   const summary = useMemo(() => {
     const revenue = ADMIN_REPORT_ROWS.reduce((sum, row) => sum + row.revenue, 0);
@@ -43,13 +48,25 @@ export default function AdminReportsPage() {
             Build hub, merchant, and system-wide financial reports with profit margin analysis and export actions.
           </p>
         </div>
-        <div className="flex gap-2">
-          <button type="button" onClick={exportAdminCsv} className="inline-flex items-center gap-2 border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">
-            <Download className="h-4 w-4" />
-            CSV
-          </button>
-          <button type="button" className="border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">Excel</button>
-          <button type="button" className="border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">PDF</button>
+        <div className="flex flex-col gap-2 md:flex-row md:items-center">
+          <select value={selectedCustomer} onChange={(e) => setSelectedCustomer(e.target.value)} className="border border-zinc-200 rounded-none px-3 py-2 text-sm">
+            <option value="">All Customers</option>
+            {customers.map((c: any) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="border border-zinc-200 rounded-none px-3 py-2 text-sm" />
+          <span className="px-2">‑</span>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border border-zinc-200 rounded-none px-3 py-2 text-sm" />
+          <button type="button" onClick={() => { /* placeholder for filter logic */ }} className="bg-[#5e1914] text-white px-4 py-2 rounded-none text-sm">Filter</button>
+          <div className="flex gap-2 md:ml-4">
+            <button type="button" onClick={exportAdminCsv} className="inline-flex items-center gap-2 border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">
+              <Download className="h-4 w-4" />
+              CSV
+            </button>
+            <button type="button" className="border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">Excel</button>
+            <button type="button" className="border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">PDF</button>
+          </div>
         </div>
       </div>
 

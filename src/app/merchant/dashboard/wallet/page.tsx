@@ -10,7 +10,7 @@ import { formatDemoDateOnly } from "@/lib/demo-date";
 export default async function MerchantWalletPage() {
   const session = await getSession();
   if (!session?.merchantId || !session.isVerified) {
-    redirect("/auth/login");
+    redirect("/merchant/login");
   }
 
   const conn = await connectDB();

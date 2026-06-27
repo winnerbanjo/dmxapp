@@ -8,7 +8,7 @@ import { MerchantBookingFlow } from "./merchant-booking-flow";
 
 export default async function MerchantBookingPage() {
   const session = await getSession();
-  if (!session?.merchantId) redirect("/auth/login");
+  if (!session?.merchantId) redirect("/merchant/login");
   const kycStatus = await getMerchantKycStatus(session.merchantId);
   if (kycStatus !== "Approved") {
     redirect("/merchant/dashboard?blocked=kyc");

@@ -1,11 +1,17 @@
 /**
  * DMX Zone-Based Cost Engine — Pricing Structure.
- * Links Country → Zone and provides rate lookup by weight.
- * Static demo data for presentation.
+ * Re-exports logic from @/lib/logic for backward compatibility.
+ * Zone labels and extended country mapping for UI.
  */
+import {
+  getCarrierCostForZone as _getCarrierCostForZone,
+  applyMarkup as _applyMarkup,
+  DEFAULT_PROFIT_MARKUP_PERCENT as _DEFAULT_PROFIT_MARKUP_PERCENT,
+  DEFAULT_ZONE_RATES,
+  type ZoneId,
+} from "@/lib/logic/pricing";
 
-/** Zone identifiers matching CSV columns. */
-export type ZoneId = "1" | "2" | "3" | "4";
+export type { ZoneId };
 
 /** Zone column headers in the rate sheet. */
 export const ZONE_LABELS: Record<ZoneId, string> = {
@@ -15,7 +21,7 @@ export const ZONE_LABELS: Record<ZoneId, string> = {
   "4": "Australia (Zone 4)",
 };
 
-/** Country → Zone mapping (from Pricing Structure). Smart Zone Search. */
+/** Country → Zone mapping (extended for Smart Zone Search). */
 export const COUNTRY_TO_ZONE: Record<string, ZoneId> = {
   // Zone 1 — UK
   uk: "1",
@@ -71,59 +77,28 @@ export const COUNTRY_TO_ZONE: Record<string, ZoneId> = {
   solomonislands: "4",
 };
 
-/** Rate sheet row: weight → cost per zone (carrier cost in NGN). */
-export interface ZoneRateRow {
-  weightKg: number;
-  zone1: number; // UK
-  zone2: number; // West Africa
-  zone3: number; // Canada & USA
-  zone4: number; // Australia
-}
-
-/** Default zone rate sheet — matches 0.5kg UK = 29372.63 and scales. */
-export const DEMO_ZONE_RATES: ZoneRateRow[] = [
-  { weightKg: 0.5, zone1: 29372.63, zone2: 15200, zone3: 34760.8, zone4: 31245.2 },
-  { weightKg: 1, zone1: 32500, zone2: 16800, zone3: 38500, zone4: 34800 },
+/** Extended zone rates (includes more weight tiers for UI). */
+const EXTENDED_RATES = [
+  ...DEFAULT_ZONE_RATES,
   { weightKg: 1.5, zone1: 36500, zone2: 18900, zone3: 43200, zone4: 38900 },
-  { weightKg: 2, zone1: 39500, zone2: 20400, zone3: 46800, zone4: 42200 },
   { weightKg: 2.5, zone1: 41000, zone2: 21200, zone3: 48500, zone4: 43800 },
   { weightKg: 3, zone1: 44800, zone2: 23200, zone3: 53100, zone4: 47800 },
   { weightKg: 4, zone1: 51200, zone2: 26500, zone3: 60700, zone4: 54700 },
-  { weightKg: 5, zone1: 57500, zone2: 29800, zone3: 68200, zone4: 61500 },
   { weightKg: 7.5, zone1: 71200, zone2: 36800, zone3: 84400, zone4: 76100 },
-  { weightKg: 10, zone1: 84800, zone2: 43900, zone3: 100500, zone4: 90600 },
   { weightKg: 15, zone1: 110200, zone2: 57000, zone3: 130600, zone4: 117800 },
-  { weightKg: 20, zone1: 135500, zone2: 70100, zone3: 160700, zone4: 144900 },
-];
+].sort((a, b) => a.weightKg - b.weightKg);
 
-/** Profit markup (default 20%). Admin-configurable. */
-export const DEFAULT_PROFIT_MARKUP_PERCENT = 20;
+export const DEFAULT_PROFIT_MARKUP_PERCENT = _DEFAULT_PROFIT_MARKUP_PERCENT;
 
-/** Get zone ID from country name (Smart Zone Search). */
+/** Get zone ID from country name (uses extended COUNTRY_TO_ZONE). */
 export function getZoneFromCountry(country: string): ZoneId | null {
   const key = country.trim().toLowerCase();
   if (!key) return null;
   return COUNTRY_TO_ZONE[key] ?? null;
 }
 
-/** Find carrier cost for weight + zone. Uses nearest weight row. */
 export function getCarrierCostForZone(weightKg: number, zoneId: ZoneId): number {
-  const zoneKey = `zone${zoneId}` as keyof ZoneRateRow;
-  if (weightKg <= 0) return 0;
-
-  const sorted = [...DEMO_ZONE_RATES].sort((a, b) => a.weightKg - b.weightKg);
-  let best = sorted[0];
-  for (const row of sorted) {
-    if (row.weightKg >= weightKg) {
-      best = row;
-      break;
-    }
-    best = row;
-  }
-  return Math.round((best[zoneKey] as number) ?? 0);
+  return _getCarrierCostForZone(weightKg, zoneId, EXTENDED_RATES as Parameters<typeof _getCarrierCostForZone>[2]);
 }
 
-/** Selling price = Cost * (1 + markup/100). */
-export function applyMarkup(cost: number, markupPercent: number): number {
-  return Math.round(cost * (1 + markupPercent / 100));
-}
+export const applyMarkup = _applyMarkup;

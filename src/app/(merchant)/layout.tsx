@@ -10,7 +10,7 @@ export default async function MerchantLayout({
 }) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
-    redirect("/auth/login?callbackUrl=/dashboard");
+    redirect("/merchant/login?callbackUrl=/dashboard");
   }
 
   const role = (session.user as { role?: string }).role;

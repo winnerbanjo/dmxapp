@@ -27,6 +27,15 @@ const PACKAGE_PRESETS: { id: PresetId; label: string; weight: number; length: nu
   { id: "custom", label: "Custom", weight: 0, length: 0, width: 0, height: 0, icon: Pencil },
 ];
 
+type CourierRate = {
+  id: string;
+  name: string;
+  service: string;
+  eta: string;
+  amount: number;
+  recommended?: boolean;
+};
+
 function formatNaira(n: number): string {
   return `₦${n.toLocaleString()}`;
 }
@@ -46,6 +55,7 @@ export function BookingForm() {
   const [premiumInsurance, setPremiumInsurance] = useState(false);
   const [fragile, setFragile] = useState(false);
   const [signatureRequired, setSignatureRequired] = useState(false);
+  const [selectedCourierId, setSelectedCourierId] = useState("dmx");
 
   const weightNum = Math.max(0, parseFloat(packageWeight) || 0);
   const declaredNum = Math.max(0, parseFloat(declaredValue) || 0);
@@ -59,6 +69,18 @@ export function BookingForm() {
       }),
     [weightNum, declaredNum, premiumInsurance, fragile]
   );
+  const courierRates: CourierRate[] = useMemo(() => {
+    const courierBase = Math.max(0, breakdown.baseShipping + breakdown.fuelSurcharge);
+    return [
+      { id: "dmx", name: "DMX Express", service: "Managed Network", eta: "1-3 business days", amount: courierBase, recommended: true },
+      { id: "dhl", name: "DHL Express", service: "Express Worldwide", eta: "1-3 business days", amount: Math.round(courierBase * 1.22 + 1000) },
+      { id: "fedex", name: "FedEx", service: "Priority", eta: "2-4 business days", amount: Math.round(courierBase * 1.12 + 1200) },
+      { id: "ups", name: "UPS", service: "Saver", eta: "3-5 business days", amount: Math.round(courierBase * 1.02 + 700) },
+    ];
+  }, [breakdown.baseShipping, breakdown.fuelSurcharge]);
+  const selectedCourier = courierRates.find((rate) => rate.id === selectedCourierId) ?? courierRates[0];
+  const customsCharge = declaredNum > 500000 ? Math.round(declaredNum * 0.025) : 0;
+  const finalTotal = selectedCourier.amount + breakdown.insurance + breakdown.fragileFee + breakdown.vat + customsCharge;
 
   const handlePresetSelect = (id: PresetId) => {
     setPreset(id);
@@ -360,6 +382,56 @@ export function BookingForm() {
               {fragile && <p className="mt-1 text-sm text-[#5e1914] font-sans">Fragile</p>}
               {signatureRequired && <p className="text-sm text-[#5e1914] font-sans">Signature required</p>}
             </div>
+            <div className="border border-zinc-100 bg-white p-8">
+              <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 font-sans">
+                Select courier
+              </p>
+              <p className="mt-1 text-sm text-zinc-500 font-sans">Choose the courier rate before creating the booking.</p>
+              <div className="mt-5 grid gap-3 border border-zinc-100 bg-[#f7f1ef] p-5 sm:grid-cols-3">
+                <SummaryMetric label="Total weight" value={`${weightNum} kg`} />
+                <SummaryMetric label="Dimensions" value={`${length} x ${width} x ${height} cm`} />
+                <SummaryMetric label="Declared value" value={formatNaira(declaredNum)} />
+              </div>
+              <div className="mt-5 space-y-3">
+                {courierRates.map((rate) => (
+                  <button
+                    key={rate.id}
+                    type="button"
+                    onClick={() => setSelectedCourierId(rate.id)}
+                    className={cn(
+                      "w-full border bg-white p-4 text-left transition-colors",
+                      selectedCourier.id === rate.id ? "border-[#5e1914] bg-[#f7f1ef]" : "border-zinc-100 hover:border-[#5e1914]"
+                    )}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-sans font-semibold text-zinc-900">{rate.name}</p>
+                          {rate.recommended && <span className="bg-[#5e1914] px-2 py-1 text-xs font-semibold text-white">Recommended</span>}
+                        </div>
+                        <p className="mt-1 font-sans text-sm text-zinc-500">{rate.service} · ETA {rate.eta}</p>
+                      </div>
+                      <p className="font-sans text-xl font-semibold tracking-tight text-[#5e1914]">{formatNaira(rate.amount)}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-6 border border-zinc-100 bg-zinc-50 p-5">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="font-sans font-semibold text-zinc-900">Checkout add-ons</p>
+                    <p className="mt-1 font-sans text-sm text-zinc-500">These charges are included before payment or final booking creation.</p>
+                  </div>
+                  <p className="font-sans text-sm font-semibold text-[#5e1914]">Payable {formatNaira(finalTotal)}</p>
+                </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-4">
+                  <SummaryMetric label="Insurance" value={formatNaira(breakdown.insurance)} />
+                  <SummaryMetric label="Customs estimate" value={formatNaira(customsCharge)} />
+                  <SummaryMetric label="Fragile handling" value={formatNaira(breakdown.fragileFee)} />
+                  <SummaryMetric label="VAT" value={formatNaira(breakdown.vat)} />
+                </div>
+              </div>
+            </div>
             <div className="flex justify-between pt-6">
               <Button
                 type="button"
@@ -372,6 +444,11 @@ export function BookingForm() {
               </Button>
               <input type="hidden" name="packageWeight" value={packageWeight} />
               <input type="hidden" name="declaredValue" value={declaredValue} />
+              <input type="hidden" name="courierId" value={selectedCourier.id} />
+              <input type="hidden" name="courierName" value={selectedCourier.name} />
+              <input type="hidden" name="courierPrice" value={selectedCourier.amount} />
+              <input type="hidden" name="customsCharge" value={customsCharge} />
+              <input type="hidden" name="payableTotal" value={finalTotal} />
               {premiumInsurance && <input type="hidden" name="premiumInsurance" value="on" />}
               {fragile && <input type="hidden" name="fragile" value="on" />}
               {signatureRequired && <input type="hidden" name="signatureRequired" value="on" />}
@@ -393,16 +470,20 @@ export function BookingForm() {
         </h3>
         <dl className="mt-6 space-y-3 text-sm">
           <div className="flex justify-between text-zinc-700">
-            <dt>Base Shipping</dt>
-            <dd>{formatNaira(breakdown.baseShipping)}</dd>
+            <dt>Selected courier</dt>
+            <dd>{selectedCourier.name}</dd>
           </div>
           <div className="flex justify-between text-zinc-700">
-            <dt>Fuel Surcharge (10%)</dt>
-            <dd>{formatNaira(breakdown.fuelSurcharge)}</dd>
+            <dt>Courier price</dt>
+            <dd>{formatNaira(selectedCourier.amount)}</dd>
           </div>
           <div className="flex justify-between text-zinc-700">
             <dt>Insurance</dt>
             <dd>{formatNaira(breakdown.insurance)}</dd>
+          </div>
+          <div className="flex justify-between text-zinc-700">
+            <dt>Customs estimate</dt>
+            <dd>{formatNaira(customsCharge)}</dd>
           </div>
           {breakdown.fragileFee > 0 && (
             <div className="flex justify-between text-zinc-700">
@@ -418,10 +499,19 @@ export function BookingForm() {
         <div className="mt-6 border-t border-zinc-100 pt-4">
           <div className="flex justify-between text-base font-semibold text-zinc-900">
             <dt>Grand Total</dt>
-            <dd>{formatNaira(breakdown.grandTotal)}</dd>
+            <dd>{formatNaira(finalTotal)}</dd>
           </div>
         </div>
       </aside>
+    </div>
+  );
+}
+
+function SummaryMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="font-sans text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className="mt-2 font-sans text-sm font-semibold text-zinc-900">{value}</p>
     </div>
   );
 }

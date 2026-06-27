@@ -28,7 +28,7 @@ export function HubSidebar() {
 
   function handleSignOut() {
     document.cookie = "dmx-hub-token=; path=/; max-age=0";
-    window.location.href = "/auth/login";
+    window.location.href = "/hub/login";
   }
 
   return (

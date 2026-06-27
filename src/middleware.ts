@@ -10,8 +10,8 @@ const SESSION_COOKIES = [
 ];
 
 const PROTECTED_PREFIXES = ["/dashboard", "/admin", "/merchant", "/customer", "/hub"];
-const PUBLIC_PREFIXES = ["/auth", "/api", "/track", "/"];
-const SIGNIN_URL = "/auth/login";
+const PUBLIC_PREFIXES = ["/auth", "/api", "/track", "/login"];
+const PUBLIC_PATHS = ["/admin/login", "/merchant/login", "/hub/login"];
 
 function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
@@ -19,16 +19,28 @@ function isProtectedPath(pathname: string): boolean {
 
 function isPublicPath(pathname: string): boolean {
   if (pathname === "/") return true;
+  if (PUBLIC_PATHS.includes(pathname)) return true;
   return PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
-function hasSessionCookie(request: NextRequest): boolean {
+function hasAnySessionCookie(request: NextRequest): boolean {
   const cookieHeader = request.cookies.toString();
   return SESSION_COOKIES.some((name) => cookieHeader.includes(`${name}=`));
 }
 
+function hasCookie(request: NextRequest, name: string): boolean {
+  return Boolean(request.cookies.get(name)?.value);
+}
+
+function getSignInPath(pathname: string): string {
+  if (pathname.startsWith("/admin")) return "/admin/login";
+  if (pathname.startsWith("/merchant")) return "/merchant/login";
+  if (pathname.startsWith("/hub")) return "/hub/login";
+  return "/auth/login";
+}
+
 function redirectToSignIn(request: NextRequest, pathname: string, reason?: string) {
-  const loginUrl = new URL(SIGNIN_URL, request.url);
+  const loginUrl = new URL(getSignInPath(pathname), request.url);
   loginUrl.searchParams.set("callbackUrl", pathname);
   if (reason) {
     console.log("[middleware] Redirecting to signin:", reason);
@@ -44,11 +56,10 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    if (!hasSessionCookie(request)) {
+    if (!hasAnySessionCookie(request)) {
       return redirectToSignIn(request, pathname, "No session cookie");
     }
 
-    // Role-check for /admin routes
     if (pathname.startsWith("/admin")) {
       let token;
       try {
@@ -66,6 +77,14 @@ export async function middleware(request: NextRequest) {
         console.log("[middleware] Admin route: token =", JSON.stringify(token ?? null), "| role =", role);
         return redirectToSignIn(request, pathname, "Missing or invalid admin token/role");
       }
+    }
+
+    if (pathname.startsWith("/merchant") && !hasCookie(request, "dmx-merchant-token")) {
+      return redirectToSignIn(request, pathname, "Missing merchant token");
+    }
+
+    if (pathname.startsWith("/hub") && !hasCookie(request, "dmx-hub-token")) {
+      return redirectToSignIn(request, pathname, "Missing hub token");
     }
 
     return NextResponse.next();

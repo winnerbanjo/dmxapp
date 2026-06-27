@@ -132,6 +132,12 @@ export async function POST(request: NextRequest) {
         update: { status: "SUCCESS" },
       });
     });
+    console.log("[Paystack Webhook] Payment success", {
+      reference,
+      amount: amountInNaira,
+      userId,
+      walletId,
+    });
   } catch (err) {
     console.error("[Paystack Webhook] Processing error:", err);
     return NextResponse.json(

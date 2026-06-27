@@ -71,7 +71,7 @@ export async function createBooking(
       return { error: "Could not generate unique tracking ID. Try again." };
     }
 
-    await Shipment.create({
+    const doc = await Shipment.create({
       merchantId: new mongoose.Types.ObjectId(session.merchantId),
       trackingId,
       receiverDetails: {
@@ -90,6 +90,12 @@ export async function createBooking(
       $inc: { walletBalance: -sellingPrice },
     });
 
+    console.log("[Booking] Shipment created", {
+      trackingId: doc.trackingId,
+      merchantId: session.merchantId,
+      cost: sellingPrice,
+    });
+
     try {
       await sendShipmentBookedEmail({
         to: session.email,
@@ -100,7 +106,7 @@ export async function createBooking(
       console.warn("Shipment booked but email failed:", emailErr);
     }
 
-    return { trackingId, success: `Shipment booked. ₦${sellingPrice.toLocaleString()} deducted.` };
+    return { trackingId: doc.trackingId, success: `Shipment booked. ₦${sellingPrice.toLocaleString()} deducted.` };
   } catch (err) {
     console.error("createBooking error:", err);
     return { error: "Booking failed. Please try again." };

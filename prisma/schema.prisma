@@ -128,6 +128,8 @@ model Wallet {
 
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+
+  @@index([userId])
 }
 
 model Transaction {
@@ -143,7 +145,11 @@ model Transaction {
   createdAt   DateTime          @default(now()) @map("created_at")
 
   wallet   Wallet    @relation(fields: [walletId], references: [id], onDelete: Cascade)
-  shipment Shipment? @relation(fields: [shipmentId], references: [id])
+  shipment Shipment? @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+
+  @@index([walletId])
+  @@index([shipmentId])
+  @@index([reference])
 }
 
 model Shipment {
@@ -178,6 +184,10 @@ model Shipment {
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions  Transaction[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model PricingRates {

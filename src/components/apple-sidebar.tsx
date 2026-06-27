@@ -10,11 +10,12 @@ import {
   History,
   LogOut,
   Users,
-  CheckSquare,
   DollarSign,
   Truck,
   BarChart3,
   Shield,
+  ClipboardList,
+  BookOpen,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -76,7 +77,7 @@ export function MerchantAppleSidebar() {
       <div className="border-t border-zinc-200 p-4">
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/auth/login" })}
+          onClick={() => signOut({ callbackUrl: "/merchant/login" })}
           className="flex w-full items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
         >
           <LogOut strokeWidth={1} className="h-4 w-4" />
@@ -89,10 +90,12 @@ export function MerchantAppleSidebar() {
 
 const adminNav = [
   { href: "/admin/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/admin/tasks", label: "Task Dispatcher", icon: CheckSquare },
+  { href: "/admin/booking", label: "Booking", icon: ClipboardList },
   { href: "/admin/merchants", label: "Merchants", icon: Package },
   { href: "/admin/shipments", label: "Shipments", icon: History },
   { href: "/admin/customers", label: "Customers", icon: Users },
+  { href: "/admin/address-book", label: "Address Book", icon: BookOpen },
+  { href: "/admin/insights", label: "Insights", icon: BarChart3 },
   { href: "/admin/pricing", label: "Pricing Engine", icon: DollarSign },
   { href: "/admin/reports", label: "Reports", icon: BarChart3 },
   { href: "/admin/users", label: "User Control", icon: Shield },
@@ -147,7 +150,7 @@ export function AdminAppleSidebar() {
       <div className="border-t border-zinc-200 p-4">
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/auth/login" })}
+          onClick={() => signOut({ callbackUrl: "/admin/login" })}
           className="flex w-full items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
         >
           <LogOut strokeWidth={1} className="h-4 w-4" />
