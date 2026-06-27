@@ -1,91 +1,261 @@
-import Image from "next/image";
+import Link from "next/link";
+import {
+  AlertCircle,
+  ArrowRight,
+  BarChart3,
+  Calculator,
+  CheckCircle2,
+  Clock3,
+  PackagePlus,
+  Search,
+  ShieldCheck,
+  Truck,
+  Wallet,
+  XCircle,
+} from "lucide-react";
+import { ADMIN_DEMO_SHIPMENTS } from "@/data/demo-shipments";
 import { GlobalShipmentsTable } from "./global-shipments-table";
-import { AdminDashboardContent } from "./admin-dashboard-content";
 
-const DEMO_MERCHANTS = [
-  { id: "1", businessName: "Mubarak's Store", email: "mubarak@example.com", verified: true },
-  { id: "2", businessName: "Lagos Boutique", email: "contact@lagosboutique.com", verified: true },
-  { id: "3", businessName: "Abuja Essentials", email: "hello@abujaessentials.ng", verified: true },
-  { id: "4", businessName: "Port Harcourt Goods", email: "info@phgoods.com", verified: true },
-  { id: "5", businessName: "Ibadan Market Co.", email: "support@ibadanmarket.co", verified: true },
+type RecentCard =
+  | {
+      title: string;
+      subtitle: string;
+      href: string;
+      tone: "action";
+    }
+  | {
+      title: string;
+      subtitle: string;
+      href: string;
+      status: string;
+      amount: number;
+      id: string;
+      tone: "shipment";
+    };
+
+const recentCards: RecentCard[] = [
+  {
+    title: "Create Admin Booking",
+    subtitle: "Book for any merchant, hub, or customer",
+    href: "/admin/booking",
+    tone: "action",
+  },
+  ...ADMIN_DEMO_SHIPMENTS.slice(0, 4).map((shipment) => ({
+    title: shipment.merchant,
+    subtitle: `${shipment.origin} to ${shipment.destination}`,
+    href: `/track/${shipment.trackingId}`,
+    status: shipment.status,
+    amount: shipment.amount,
+    id: shipment.trackingId,
+    tone: "shipment" as const,
+  })),
 ];
 
+function money(value: number) {
+  return `₦${value.toLocaleString("en-NG")}`;
+}
+
+function statusTone(status: string) {
+  const normalized = status.toLowerCase();
+  if (normalized.includes("delivered")) return "bg-emerald-50 text-emerald-700";
+  if (normalized.includes("transit") || normalized.includes("delivery") || normalized.includes("picked")) return "bg-[#f7f1ef] text-[#5e1914]";
+  if (normalized.includes("pending")) return "bg-amber-50 text-amber-700";
+  return "bg-zinc-100 text-zinc-600";
+}
+
 export default function AdminDashboardPage() {
+  const totalShipments = ADMIN_DEMO_SHIPMENTS.length;
+  const inTransit = ADMIN_DEMO_SHIPMENTS.filter((shipment) => {
+    const status = shipment.status.toLowerCase();
+    return status.includes("transit") || status.includes("picked") || status.includes("delivery");
+  }).length;
+  const delivered = ADMIN_DEMO_SHIPMENTS.filter((shipment) => shipment.status.toLowerCase().includes("delivered")).length;
+  const pending = ADMIN_DEMO_SHIPMENTS.filter((shipment) => shipment.status.toLowerCase().includes("pending")).length;
+  const walletFloat = 38265.4;
+  const revenue = ADMIN_DEMO_SHIPMENTS.reduce((sum, shipment) => sum + shipment.amount, 0);
+  const profit = ADMIN_DEMO_SHIPMENTS.reduce((sum, shipment) => sum + shipment.amount - shipment.partnerCost, 0);
+
+  const metrics = [
+    { label: "Total Shipments", value: totalShipments.toLocaleString("en-NG"), icon: Truck, href: "/admin/shipments", color: "text-sky-600" },
+    { label: "Shipments in Transit", value: inTransit.toLocaleString("en-NG"), icon: Clock3, href: "/admin/shipments", color: "text-amber-600" },
+    { label: "Delivered Shipments", value: delivered.toLocaleString("en-NG"), icon: CheckCircle2, href: "/admin/shipments", color: "text-emerald-600" },
+    { label: "Pending Review", value: pending.toLocaleString("en-NG"), icon: XCircle, href: "/admin/insights", color: "text-red-600" },
+  ];
+
   return (
-    <div className="mx-auto max-w-5xl bg-white px-8 py-8">
-      {/* Header with logo */}
-      <header className="flex items-center gap-4 border-b border-zinc-200 pb-6">
-        <div className="relative h-10 w-10 shrink-0 overflow-hidden bg-white">
-          <Image
-            src="/dmxlogo.svg"
-            alt="DMX"
-            fill
-            className="object-contain"
-            sizes="40px"
-          />
+    <div className="min-h-full bg-[#f4f1ed]">
+      <header className="border-b border-zinc-200 bg-white">
+        <div className="flex h-16 items-center justify-between gap-4 px-7">
+          <Link href="/admin/dashboard" className="flex items-center gap-3">
+            <span className="grid h-9 w-9 place-items-center bg-[#5e1914] text-sm font-bold text-white">D</span>
+            <span className="text-sm font-semibold text-zinc-900">DMX Admin</span>
+          </Link>
+          <div className="hidden items-center gap-3 lg:flex">
+            <Link href="/admin/booking" className="inline-flex h-10 items-center gap-2 bg-[#5e1914] px-4 text-sm font-semibold text-white hover:bg-[#4a130f]">
+              <PackagePlus className="h-4 w-4" />
+              Book Shipment
+            </Link>
+            <Link href="/track" className="inline-flex h-10 items-center gap-2 border border-[#5e1914]/30 bg-white px-4 text-sm font-semibold text-[#5e1914] hover:border-[#5e1914]">
+              <Search className="h-4 w-4" />
+              Track Shipment
+            </Link>
+            <Link href="/admin/pricing" className="inline-flex h-10 items-center gap-2 border border-[#5e1914]/30 bg-white px-4 text-sm font-semibold text-[#5e1914] hover:border-[#5e1914]">
+              <Calculator className="h-4 w-4" />
+              Rates Calculator
+            </Link>
+          </div>
+          <Link href="/admin/users" className="inline-flex h-10 items-center gap-2 text-sm font-medium text-zinc-600 hover:text-[#5e1914]">
+            <ShieldCheck className="h-4 w-4" />
+            Admin Help
+          </Link>
         </div>
-        <div>
-          <h1 className="font-sans text-3xl font-semibold tracking-tighter text-zinc-900">
-            Admin Command Center
-          </h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            System metrics, hub performance, and global shipments.
-          </p>
+        <div className="flex items-center justify-center gap-2 bg-[#5e1914] px-4 py-3 text-center text-sm text-white">
+          <AlertCircle className="h-4 w-4" />
+          System control is active across merchants, hubs, couriers, rates, and permissions.
+          <Link href="/admin/insights" className="font-semibold underline">
+            Open command insights
+          </Link>
         </div>
       </header>
 
-      {/* Date Filter + Layer 1 (Cards) + Layer 2 (Hub Performance Table) */}
-      <AdminDashboardContent />
+      <main className="px-7 py-9">
+        <div className="mx-auto max-w-7xl">
+          <section className="flex flex-wrap items-start justify-between gap-5">
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">Hello, Admin!</h1>
+              <p className="mt-1 text-sm text-zinc-500">Consider the whole network monitored.</p>
+            </div>
+            <div className="flex min-w-[280px] items-center justify-between gap-5 border border-zinc-100 bg-white p-5 shadow-sm">
+              <div>
+                <p className="flex items-center gap-2 text-sm text-zinc-400">
+                  <Wallet className="h-4 w-4 text-[#5e1914]" />
+                  Operating Float
+                </p>
+                <p className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900">{money(walletFloat)}</p>
+              </div>
+              <Link href="/admin/reports" className="bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-[#5e1914]">
+                Top up
+              </Link>
+            </div>
+          </section>
 
-      {/* Global Shipments */}
-      <section className="mt-16">
-        <h2 className="font-sans text-lg font-semibold tracking-tighter text-zinc-900">
-          Global Shipments
-        </h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          Search and filter by branch. Selecting a branch shows only that hub&apos;s shipments.
-        </p>
-        <div className="mt-6">
-          <GlobalShipmentsTable />
-        </div>
-      </section>
+          <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {metrics.map((metric) => {
+              const Icon = metric.icon;
+              return (
+                <div key={metric.label} className="border border-zinc-100 bg-white p-5 shadow-sm">
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="flex items-center gap-2 text-sm text-zinc-500">
+                      <Icon className={`h-4 w-4 ${metric.color}`} />
+                      {metric.label}
+                    </p>
+                    <Link href={metric.href} className="bg-zinc-50 px-4 py-2 text-xs font-semibold text-zinc-700 hover:bg-[#f7f1ef] hover:text-[#5e1914]">
+                      View
+                    </Link>
+                  </div>
+                  <p className="mt-5 text-2xl font-semibold tracking-tight text-zinc-900">{metric.value}</p>
+                </div>
+              );
+            })}
+          </section>
 
-      {/* Merchant List */}
-      <section className="mt-16">
-        <h2 className="font-sans text-lg font-semibold tracking-tighter text-zinc-900">
-          Merchant list
-        </h2>
-        <div className="mt-6 overflow-hidden rounded-none border border-zinc-100 bg-white">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-zinc-100 bg-zinc-50">
-                <th className="px-8 py-5 font-medium font-sans tracking-tighter text-zinc-900">
-                  Business
-                </th>
-                <th className="px-8 py-5 font-medium font-sans tracking-tighter text-zinc-900">
-                  Email
-                </th>
-                <th className="px-8 py-5 font-medium font-sans tracking-tighter text-zinc-900">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {DEMO_MERCHANTS.map((m) => (
-                <tr key={m.id} className="border-b border-zinc-100 last:border-b-0">
-                  <td className="px-8 py-5 font-medium text-zinc-900">{m.businessName}</td>
-                  <td className="px-8 py-5 text-zinc-600">{m.email}</td>
-                  <td className="px-8 py-5">
-                    <span className="inline-block border border-[#5e1914] bg-[#5e1914]/10 px-2 py-1 text-xs font-medium text-[#5e1914]">
-                      Verified
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <section className="mt-7 overflow-hidden bg-[#5e1914] px-8 py-9 text-white">
+            <div className="flex flex-wrap items-center justify-between gap-6">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/70">DMX Control Layer</p>
+                <h2 className="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">Run every shipment from one admin view</h2>
+                <p className="mt-3 max-w-2xl text-lg text-white/80">Monitor revenue, courier rates, merchant activity, hub movement, wallet exposure, and delivery outcomes without switching branches.</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="bg-white/10 p-4">
+                  <p className="text-sm text-white/70">Revenue</p>
+                  <p className="mt-2 text-2xl font-semibold">{money(revenue)}</p>
+                </div>
+                <div className="bg-white/10 p-4">
+                  <p className="text-sm text-white/70">Gross Profit</p>
+                  <p className="mt-2 text-2xl font-semibold">{money(profit)}</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="mt-8 border-t border-zinc-200 pt-7">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-lg font-semibold tracking-tight text-zinc-900">System Shipments</h2>
+              <Link href="/admin/shipments" className="inline-flex items-center gap-2 text-sm font-semibold text-[#5e1914]">
+                See All
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+              {recentCards.map((card) => {
+                if (card.tone === "action") {
+                  return (
+                    <Link key={card.title} href={card.href} className="min-h-32 bg-[#9f241b] p-5 text-white hover:bg-[#7e1e18]">
+                      <span className="grid h-8 w-8 place-items-center rounded-full bg-white text-[#5e1914]">+</span>
+                      <p className="mt-5 text-sm font-medium">{card.title}</p>
+                      <p className="mt-1 text-xs text-white/75">{card.subtitle}</p>
+                    </Link>
+                  );
+                }
+                return (
+                  <Link key={card.id} href={card.href} className="min-h-32 border border-[#ead8d5] bg-[#f7e9df] p-5 hover:border-[#5e1914]">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-zinc-900">{card.title}</p>
+                        <p className="mt-1 text-xs text-zinc-600">{card.subtitle}</p>
+                      </div>
+                      <span className={`px-2 py-1 text-xs font-semibold ${statusTone(card.status ?? "")}`}>{card.status}</span>
+                    </div>
+                    <p className="mt-4 text-sm font-semibold text-zinc-900">{money(card.amount ?? 0)}</p>
+                    <p className="mt-2 font-mono text-xs text-[#5e1914] underline">{card.id}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="mt-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="border border-zinc-100 bg-white p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold tracking-tight text-zinc-900">Operational Pulse</h2>
+                  <p className="mt-1 text-sm text-zinc-500">A quick admin view of shipment movement and exceptions.</p>
+                </div>
+                <BarChart3 className="h-5 w-5 text-[#5e1914]" />
+              </div>
+              <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                {[
+                  ["Courier lanes active", "8"],
+                  ["Hub queues open", "3"],
+                  ["Address reviews", "1"],
+                ].map(([label, value]) => (
+                  <div key={label} className="border border-zinc-100 p-4">
+                    <p className="text-xs uppercase tracking-wider text-zinc-400">{label}</p>
+                    <p className="mt-2 text-2xl font-semibold text-zinc-900">{value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="border border-zinc-100 bg-white p-6">
+              <h2 className="text-lg font-semibold tracking-tight text-zinc-900">Control Shortcuts</h2>
+              <div className="mt-5 grid gap-3">
+                <Link href="/admin/address-book" className="border border-zinc-100 px-4 py-3 text-sm font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">Global Address Book</Link>
+                <Link href="/admin/users" className="border border-zinc-100 px-4 py-3 text-sm font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">Roles & Permissions</Link>
+                <Link href="/admin/pricing" className="border border-zinc-100 px-4 py-3 text-sm font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">Pricing Engine</Link>
+              </div>
+            </div>
+          </section>
+
+          <section className="mt-12 border-t border-zinc-200 pt-8">
+            <h2 className="text-lg font-semibold tracking-tight text-zinc-900">Global Shipments</h2>
+            <p className="mt-1 text-sm text-zinc-500">Search and filter by branch. Selecting a branch shows only that hub&apos;s shipments.</p>
+            <div className="mt-6">
+              <GlobalShipmentsTable />
+            </div>
+          </section>
         </div>
-      </section>
+      </main>
     </div>
   );
 }
