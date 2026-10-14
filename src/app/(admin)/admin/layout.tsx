@@ -8,6 +8,10 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  if (process.env.DISABLE_DEMO !== "true") {
+    return <>{children}</>;
+  }
+
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/admin/login");
 

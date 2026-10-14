@@ -52,6 +52,11 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   try {
+    // In demo / showcase mode, allow visitors to explore dashboards directly without a login barrier
+    if (process.env.DISABLE_DEMO !== "true") {
+      return NextResponse.next();
+    }
+
     if (!isProtectedPath(pathname) || isPublicPath(pathname)) {
       return NextResponse.next();
     }
