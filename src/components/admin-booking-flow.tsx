@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
+  Bookmark,
   Check,
   Copy,
   Edit3,
@@ -19,6 +20,7 @@ import {
   Search,
   ShieldCheck,
   Trash2,
+  Truck,
   Upload,
   X,
 } from "lucide-react";
@@ -190,12 +192,14 @@ export function AdminBookingFlow() {
   const [insurance, setInsurance] = useState(true);
   const [confirmed, setConfirmed] = useState(false);
   const [bookingPending, setBookingPending] = useState(false);
+  const [draftPending, setDraftPending] = useState(false);
   const [confirmedShipment, setConfirmedShipment] = useState<{
     trackingNumber: string | number;
     shipmentId: string;
     status: string;
     carrier: string;
     date: string;
+    isDraft?: boolean;
   } | null>(null);
 
   const volumetricWeight = useMemo(
@@ -336,6 +340,75 @@ export function AdminBookingFlow() {
     }
   }
 
+  async function handleSaveDraft() {
+    setDraftPending(true);
+    try {
+      const res = await fetch("/api/shipments/book", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sender,
+          receiver,
+          items,
+          packaging,
+          length,
+          width,
+          height,
+          chargeableWeight,
+          selectedRate,
+          pickupMode,
+          total,
+          isDraft: true,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setConfirmedShipment({
+          trackingNumber: data.trackingNumber,
+          shipmentId: data.shipmentId,
+          status: data.status || "DRAFT",
+          carrier: data.carrier,
+          date: data.date,
+          isDraft: true,
+        });
+        setConfirmed(true);
+      } else {
+        alert(data.message || "Failed to save draft");
+      }
+    } catch (err) {
+      console.error("[BookingFlow] Draft save failed:", err);
+      alert("Error saving shipment draft. Please try again.");
+    } finally {
+      setDraftPending(false);
+    }
+  }
+
+  async function handlePromoteDraft(trackingNum: string | number) {
+    setBookingPending(true);
+    try {
+      const res = await fetch(`/api/shipments/${trackingNum}/book-carrier`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Consignment successfully booked onto carrier!");
+        setConfirmedShipment((prev: any) => ({
+          ...prev,
+          status: "PRE-TRANSIT",
+          isDraft: false,
+        }));
+      } else {
+        alert(data.message || "Failed to book onto carrier");
+      }
+    } catch (err) {
+      console.error("Failed to book draft onto carrier:", err);
+      alert("Error booking draft onto carrier");
+    } finally {
+      setBookingPending(false);
+    }
+  }
+
   function closeItemModal() {
     setShowItemModal(false);
     setEditingItemIndex(null);
@@ -430,22 +503,54 @@ export function AdminBookingFlow() {
               </button>
             </div>
             <p className="mt-2 text-sm text-zinc-500">
-              Live Verified Booking · Status: <span className="font-semibold text-emerald-600">PRE-TRANSIT</span> ·{" "}
-              {new Date().toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              {confirmedShipment?.isDraft ? (
+                <>
+                  Saved as Draft · Status:{" "}
+                  <span className="font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5">
+                    DRAFT · AWAITING WALLET FUNDING
+                  </span>{" "}
+                  · {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </>
+              ) : (
+                <>
+                  Live Verified Booking · Status: <span className="font-semibold text-emerald-600">PRE-TRANSIT</span> ·{" "}
+                  {new Date().toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </>
+              )}
             </p>
           </div>
           <div className="flex flex-wrap gap-2.5">
+            {confirmedShipment?.isDraft ? (
+              <button
+                type="button"
+                onClick={() => handlePromoteDraft(confirmedShipment.trackingNumber)}
+                disabled={bookingPending}
+                className="inline-flex items-center gap-1.5 rounded-none bg-[#5e1914] px-5 py-3 text-sm font-semibold text-white hover:bg-[#4a130f] disabled:opacity-50 shadow-sm"
+              >
+                {bookingPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Booking onto Carrier...</span>
+                  </>
+                ) : (
+                  <>
+                    <Truck className="h-4 w-4" />
+                    <span>Book onto Carrier Now</span>
+                  </>
+                )}
+              </button>
+            ) : null}
             <a
               href={`/shipments/${confirmedShipment?.trackingNumber ?? "132718"}/label?print=true`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-none border border-[#5e1914] bg-[#5e1914] px-5 py-3 text-sm font-semibold text-white hover:bg-[#4a130f]"
+              className="inline-flex items-center gap-1.5 rounded-none border border-[#5e1914] bg-white px-5 py-3 text-sm font-semibold text-[#5e1914] hover:bg-[#5e1914]/5"
             >
               <Printer className="h-4 w-4" />
               <span>Print Label</span>
@@ -482,6 +587,48 @@ export function AdminBookingFlow() {
             </Link>
           </div>
         </div>
+
+        {confirmedShipment?.isDraft ? (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border border-blue-200 bg-blue-50/80 p-5">
+            <div className="flex items-start gap-3">
+              <Bookmark className="h-5 w-5 text-blue-700 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-bold text-blue-950">
+                  Consignment Saved as Draft (Wallet Not Yet Funded)
+                </h3>
+                <p className="mt-0.5 text-xs text-blue-800">
+                  All consignment details, declared items, and live carrier rates have been securely preserved under reference {trackingDisplay}. Once the customer&apos;s wallet is funded, click &quot;Book onto Carrier Now&quot; to dispatch live.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/admin/reports"
+                className="inline-flex items-center gap-1.5 border border-blue-300 bg-white px-4 py-2.5 text-xs font-semibold text-blue-900 hover:bg-blue-50"
+              >
+                Fund Wallet
+              </Link>
+              <button
+                type="button"
+                onClick={() => handlePromoteDraft(confirmedShipment.trackingNumber)}
+                disabled={bookingPending}
+                className="inline-flex items-center gap-1.5 bg-[#5e1914] px-5 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-[#4a130f] disabled:opacity-50"
+              >
+                {bookingPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Booking...</span>
+                  </>
+                ) : (
+                  <>
+                    <Truck className="h-4 w-4" />
+                    <span>Book onto Carrier Now</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        ) : null}
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
           <div className="space-y-6">
             <div className="grid gap-6 md:grid-cols-2">
@@ -671,7 +818,7 @@ export function AdminBookingFlow() {
                   ))}
                 </div>
               </div>
-              <FooterActions onPrevious={() => go("receiver")} onNext={() => go("addons")} />
+              <FooterActions onPrevious={() => go("receiver")} onNext={() => go("addons")} onSaveDraft={handleSaveDraft} draftPending={draftPending} />
             </section>
           )}
           {step === "carrier" && (
@@ -765,7 +912,7 @@ export function AdminBookingFlow() {
                   <ChargePill label="Service charge" value={money(serviceCharge)} />
                 </div>
               </div>
-              <FooterActions onPrevious={() => go("addons")} onNext={() => go("review")} disabled={loadingRates} />
+              <FooterActions onPrevious={() => go("addons")} onNext={() => go("review")} disabled={loadingRates} onSaveDraft={handleSaveDraft} draftPending={draftPending} />
             </section>
           )}
           {step === "addons" && (
@@ -793,7 +940,7 @@ export function AdminBookingFlow() {
                 </div>
               </div>
               <p className="mt-6 text-right text-sm font-semibold text-zinc-700">Total Add-ons {money(insuranceFee)}</p>
-              <FooterActions onPrevious={() => go("items")} onNext={() => go("carrier")} />
+              <FooterActions onPrevious={() => go("items")} onNext={() => go("carrier")} onSaveDraft={handleSaveDraft} draftPending={draftPending} />
             </section>
           )}
           {step === "review" && (
@@ -820,6 +967,7 @@ export function AdminBookingFlow() {
                   <p className="mt-1 text-zinc-500">{pickupMode === "pickup" ? "Pickup from sender address" : `Drop off at ${branches[selectedBranch].name}`}</p>
                 </ReviewRow>
               </div>
+              <FooterActions onPrevious={() => go("carrier")} onSaveDraft={handleSaveDraft} draftPending={draftPending} />
             </section>
           )}
         </main>
@@ -833,6 +981,8 @@ export function AdminBookingFlow() {
             service={serviceCharge}
             bookingPending={bookingPending}
             onPay={handleBookShipment}
+            onSaveDraft={handleSaveDraft}
+            draftPending={draftPending}
           />
         ) : null}
       </div>
@@ -1453,6 +1603,8 @@ function RightRail({
   service,
   bookingPending,
   onPay,
+  onSaveDraft,
+  draftPending,
 }: {
   step: Step;
   total: number;
@@ -1462,6 +1614,8 @@ function RightRail({
   service: number;
   bookingPending?: boolean;
   onPay: () => void;
+  onSaveDraft?: () => void;
+  draftPending?: boolean;
 }) {
   if (step === "review") {
     return (
@@ -1474,6 +1628,8 @@ function RightRail({
         service={service}
         bookingPending={bookingPending}
         onPay={onPay}
+        onSaveDraft={onSaveDraft}
+        draftPending={draftPending}
       />
     );
   }
@@ -1490,6 +1646,8 @@ function PaymentPanel({
   service,
   bookingPending,
   onPay,
+  onSaveDraft,
+  draftPending,
 }: {
   title: string;
   total: number;
@@ -1499,6 +1657,8 @@ function PaymentPanel({
   service: number;
   bookingPending?: boolean;
   onPay?: () => void;
+  onSaveDraft?: () => void;
+  draftPending?: boolean;
 }) {
   return (
     <aside className="bg-[#f7f1ef] px-8 py-10">
@@ -1530,8 +1690,9 @@ function PaymentPanel({
         </div>
 
         <button
+          type="button"
           onClick={onPay}
-          disabled={bookingPending}
+          disabled={bookingPending || draftPending}
           className="mt-6 flex w-full items-center justify-center gap-2 rounded-none bg-[#5e1914] py-4 font-semibold text-white hover:bg-[#4a130f] disabled:bg-zinc-400 transition-all shadow-sm"
         >
           {bookingPending ? (
@@ -1543,6 +1704,28 @@ function PaymentPanel({
             "Affirm & Book Shipment"
           )}
         </button>
+
+        {onSaveDraft ? (
+          <button
+            type="button"
+            onClick={onSaveDraft}
+            disabled={bookingPending || draftPending}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-none border-2 border-zinc-300 bg-white py-3.5 text-sm font-semibold text-zinc-800 transition hover:border-[#5e1914] hover:text-[#5e1914] hover:bg-zinc-50 disabled:opacity-50"
+            title="Save consignment as draft if customer wallet is not yet funded"
+          >
+            {draftPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saving as Draft...
+              </>
+            ) : (
+              <>
+                <Bookmark className="h-4 w-4 text-[#5e1914]" />
+                <span>Save as Draft (Fund Wallet Later)</span>
+              </>
+            )}
+          </button>
+        ) : null}
       </div>
     </aside>
   );
@@ -1566,11 +1749,65 @@ function ChargePill({ label, value }: { label: string; value: string }) {
   );
 }
 
-function FooterActions({ onPrevious, onNext, disabled }: { onPrevious?: () => void; onNext?: () => void; disabled?: boolean }) {
+function FooterActions({
+  onPrevious,
+  onNext,
+  disabled,
+  onSaveDraft,
+  draftPending,
+}: {
+  onPrevious?: () => void;
+  onNext?: () => void;
+  disabled?: boolean;
+  onSaveDraft?: () => void;
+  draftPending?: boolean;
+}) {
   return (
-    <div className="mt-10 flex justify-between">
-      {onPrevious ? <button onClick={onPrevious} className="border border-zinc-200 px-6 py-3 font-semibold text-zinc-700">Previous</button> : <span />}
-      {onNext ? <button disabled={disabled} onClick={onNext} className="bg-[#5e1914] px-8 py-3 font-semibold text-white hover:bg-[#4a130f] disabled:bg-zinc-200">Save and Continue</button> : null}
+    <div className="mt-10 flex flex-wrap items-center justify-between gap-3">
+      {onPrevious ? (
+        <button
+          type="button"
+          onClick={onPrevious}
+          className="border border-zinc-200 bg-white px-6 py-3 font-semibold text-zinc-700 hover:bg-zinc-50 transition"
+        >
+          Previous
+        </button>
+      ) : (
+        <span />
+      )}
+      <div className="flex items-center gap-3">
+        {onSaveDraft ? (
+          <button
+            type="button"
+            onClick={onSaveDraft}
+            disabled={disabled || draftPending}
+            className="flex items-center gap-2 border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914] transition disabled:opacity-50"
+            title="Save as draft if wallet is not yet funded"
+          >
+            {draftPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Saving Draft...</span>
+              </>
+            ) : (
+              <>
+                <Bookmark className="h-4 w-4 text-[#5e1914]" />
+                <span>Save Draft</span>
+              </>
+            )}
+          </button>
+        ) : null}
+        {onNext ? (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={onNext}
+            className="bg-[#5e1914] px-8 py-3 font-semibold text-white hover:bg-[#4a130f] disabled:bg-zinc-200 transition"
+          >
+            Save and Continue
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

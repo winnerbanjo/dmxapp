@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Copy, FileText, Loader2, Printer, RefreshCw, Search } from "lucide-react";
+import { Bookmark, Copy, FileText, Loader2, Printer, RefreshCw, Search, Truck } from "lucide-react";
 
 interface RealShipment {
   id: string;
@@ -20,6 +20,7 @@ interface RealShipment {
 
 const STATUS_OPTIONS = [
   "All statuses",
+  "DRAFT",
   "PRE-TRANSIT",
   "TRANSIT",
   "DELIVERED",
@@ -31,6 +32,7 @@ const STATUS_OPTIONS = [
 
 function statusClass(status?: string | null): string {
   const s = (status || "").toLowerCase();
+  if (s.includes("draft")) return "border-blue-500 bg-blue-50 text-blue-700";
   if (s.includes("delivered")) return "border-green-600 bg-green-50 text-green-700";
   if (s.includes("transit") || s.includes("delivery") || s.includes("picked"))
     return "border-[#5e1914] bg-[#5e1914]/10 text-[#5e1914]";
@@ -56,6 +58,7 @@ export function AdminShipmentsTable() {
   const [shipments, setShipments] = useState<RealShipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [promotingId, setPromotingId] = useState<string | null>(null);
 
   const fetchShipments = useCallback(async () => {
     setLoading(true);
@@ -89,6 +92,27 @@ export function AdminShipmentsTable() {
     navigator.clipboard.writeText(tracking);
     setCopiedId(tracking);
     setTimeout(() => setCopiedId(null), 2000);
+  }
+
+  async function handlePromote(trackingStr: string) {
+    setPromotingId(trackingStr);
+    try {
+      const res = await fetch(`/api/shipments/${trackingStr}/book-carrier`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Consignment ${trackingStr} successfully booked onto carrier!`);
+        fetchShipments();
+      } else {
+        alert(data.message || "Failed to book onto carrier");
+      }
+    } catch (err) {
+      console.error("Failed to promote draft:", err);
+      alert("Error booking draft onto carrier");
+    } finally {
+      setPromotingId(null);
+    }
   }
 
   return (
@@ -230,6 +254,22 @@ export function AdminShipmentsTable() {
                     <td className="px-6 py-4 text-zinc-500 text-xs">{formattedDate}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1.5">
+                        {s.status?.toUpperCase() === "DRAFT" ? (
+                          <button
+                            type="button"
+                            onClick={() => handlePromote(trackingStr)}
+                            disabled={promotingId === trackingStr}
+                            className="inline-flex items-center gap-1 border border-blue-600 bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
+                            title="Customer wallet is funded? Book onto carrier now"
+                          >
+                            {promotingId === trackingStr ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Truck className="h-3 w-3" />
+                            )}
+                            <span>Book Carrier</span>
+                          </button>
+                        ) : null}
                         <Link
                           href={`/track/${trackingStr}`}
                           className="border border-zinc-200 bg-white px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]"

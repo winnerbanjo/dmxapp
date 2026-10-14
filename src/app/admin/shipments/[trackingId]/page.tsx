@@ -4,6 +4,7 @@ import { ArrowLeft, Copy, FileText, PackageCheck, Printer, RefreshCw, Save, Shie
 import { ADMIN_DEMO_SHIPMENTS } from "@/data/demo-shipments";
 import { connectLegacyDB } from "@/lib/legacy/connection";
 import mongoose from "mongoose";
+import { DraftBookingBanner } from "./draft-booking-banner";
 
 type PageProps = {
   params: Promise<{ trackingId: string }>;
@@ -16,7 +17,8 @@ function money(value: number) {
 function statusClass(status: string) {
   const normalized = status.toLowerCase();
   if (normalized.includes("delivered")) return "bg-emerald-50 text-emerald-700";
-  if (normalized.includes("pending") || normalized.includes("draft")) return "bg-amber-50 text-amber-700";
+  if (normalized.includes("draft")) return "bg-blue-50 text-blue-700 border border-blue-200";
+  if (normalized.includes("pending")) return "bg-amber-50 text-amber-700";
   return "bg-[#f7f1ef] text-[#5e1914]";
 }
 
@@ -130,6 +132,10 @@ export default async function AdminShipmentDetailPage({ params }: PageProps) {
           </Link>
         </div>
       </div>
+
+      {shipment.status?.toUpperCase() === "DRAFT" ? (
+        <DraftBookingBanner trackingId={shipment.trackingId} />
+      ) : null}
 
       <section className="mt-8 grid gap-4 md:grid-cols-4">
         <Metric label="Status" value={shipment.status} icon={<PackageCheck className="h-5 w-5" />} badge />

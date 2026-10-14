@@ -51,7 +51,7 @@ export async function getLegacyShipments(options?: {
   const query: Record<string, unknown> = {};
 
   if (options?.status) {
-    query.Status = options.status;
+    query.Status = { $regex: new RegExp(`^${options.status.trim()}$`, "i") };
   }
 
   if (options?.search) {

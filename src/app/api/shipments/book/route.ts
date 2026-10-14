@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
       selectedRate,
       pickupMode = "pickup",
       total = 0,
+      isDraft = false,
     } = body;
 
     const conn = await connectLegacyDB();
@@ -54,15 +55,20 @@ export async function POST(req: NextRequest) {
       (sender?.country ?? "").toLowerCase() === "nigeria" &&
       (receiver?.country ?? "").toLowerCase() === "nigeria";
 
+    const initialStatus = isDraft ? "DRAFT" : "PRE-TRANSIT";
+    const initialActivity = isDraft
+      ? "Shipment saved as Draft (Awaiting customer wallet funding)"
+      : "Shipment Booked via Admin Console";
+
     const newShipment = {
       TrackingNumber: trackingNumber,
       CreatedBy: "Admin",
       Admin: new mongoose.Types.ObjectId(DEFAULT_ADMIN_ID),
       Branch: new mongoose.Types.ObjectId(DEFAULT_BRANCH_ID),
       User: new mongoose.Types.ObjectId(DEFAULT_USER_ID),
-      Description: items[0]?.name ?? "Export Parcel",
+      Description: items[0]?.name ?? (isDraft ? "Draft Parcel" : "Export Parcel"),
       Type: isLocal ? "Local" : "Export",
-      Status: "PRE-TRANSIT",
+      Status: initialStatus,
       Carrier: new mongoose.Types.ObjectId(DHL_CARRIER_ID),
       TotalWeight: Number(chargeableWeight) || 1,
       TotalIncomeCharge: Number(total) || 0,
@@ -111,8 +117,8 @@ export async function POST(req: NextRequest) {
       ActivityLogs: [
         {
           _id: new mongoose.Types.ObjectId(),
-          Status: "PRE-TRANSIT",
-          Activity: "Shipment Booked via Admin Console",
+          Status: initialStatus,
+          Activity: initialActivity,
           UpdateType: "Admin",
           DateUpdated: new Date(),
         },
@@ -127,7 +133,8 @@ export async function POST(req: NextRequest) {
       success: true,
       shipmentId: insertResult.insertedId.toString(),
       trackingNumber,
-      status: "PRE-TRANSIT",
+      status: initialStatus,
+      isDraft: Boolean(isDraft),
       carrier: selectedRate?.name ?? "DHL Express",
       date: new Date().toISOString(),
     });
