@@ -55,7 +55,6 @@ export default async function AdminDashboardPage() {
     overview?.shipmentsByStatus?.find((s) => s.status === "DELIVERED")?.count ?? 0;
   const pending =
     overview?.shipmentsByStatus?.find((s) => s.status === "PRE-TRANSIT")?.count ?? 0;
-  const walletFloat = 38265.4;
 
   const rawRecent = recentShipmentsData?.shipments || [];
   const recentCards = [
@@ -163,7 +162,7 @@ export default async function AdminDashboardPage() {
 
       <main className="px-7 py-9">
         <div className="mx-auto max-w-7xl">
-          <section className="flex flex-wrap items-start justify-between gap-5">
+          <section className="flex flex-wrap items-center justify-between gap-5">
             <div>
               <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">
                 Hello, Admin!
@@ -172,21 +171,18 @@ export default async function AdminDashboardPage() {
                 Real-time operational dashboard for DMX Logistics.
               </p>
             </div>
-            <div className="flex min-w-[280px] items-center justify-between gap-5 border border-zinc-100 bg-white p-5 shadow-sm">
-              <div>
-                <p className="flex items-center gap-2 text-sm text-zinc-400">
-                  <Wallet className="h-4 w-4 text-[#5e1914]" />
-                  Operating Float
-                </p>
-                <p className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900">
-                  {money(walletFloat)}
-                </p>
-              </div>
+            <div className="flex items-center gap-3">
               <Link
-                href="/admin/reports"
-                className="bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-[#5e1914]"
+                href="/admin/booking"
+                className="bg-[#5e1914] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#4a130f]"
               >
-                Top up
+                + Book Shipment
+              </Link>
+              <Link
+                href="/admin/shipments"
+                className="border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-800 hover:bg-zinc-50"
+              >
+                View Shipments
               </Link>
             </div>
           </section>
