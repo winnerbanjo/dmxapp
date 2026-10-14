@@ -86,28 +86,25 @@ export default function AdminDashboardPage() {
     <div className="min-h-full bg-[#f4f1ed]">
       <header className="border-b border-zinc-200 bg-white">
         <div className="flex h-16 items-center justify-between gap-4 px-7">
-          <Link href="/admin/dashboard" className="flex items-center gap-3">
-            <span className="grid h-9 w-9 place-items-center bg-[#5e1914] text-sm font-bold text-white">D</span>
-            <span className="text-sm font-semibold text-zinc-900">DMX Admin</span>
-          </Link>
-          <div className="hidden items-center gap-3 lg:flex">
-            <Link href="/admin/booking" className="inline-flex h-10 items-center gap-2 bg-[#5e1914] px-4 text-sm font-semibold text-white hover:bg-[#4a130f]">
-              <PackagePlus className="h-4 w-4" />
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Command Center</span>
+            <span className="text-zinc-300">/</span>
+            <span className="text-sm font-semibold text-zinc-900">Overview</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/admin/booking" className="inline-flex h-9 items-center gap-2 bg-[#5e1914] px-4 text-xs font-semibold text-white hover:bg-[#4a130f]">
+              <PackagePlus className="h-3.5 w-3.5" />
               Book Shipment
             </Link>
-            <Link href="/track" className="inline-flex h-10 items-center gap-2 border border-[#5e1914]/30 bg-white px-4 text-sm font-semibold text-[#5e1914] hover:border-[#5e1914]">
-              <Search className="h-4 w-4" />
-              Track Shipment
+            <Link href="/track" className="inline-flex h-9 items-center gap-2 border border-[#5e1914]/30 bg-white px-4 text-xs font-semibold text-[#5e1914] hover:border-[#5e1914]">
+              <Search className="h-3.5 w-3.5" />
+              Track
             </Link>
-            <Link href="/admin/pricing" className="inline-flex h-10 items-center gap-2 border border-[#5e1914]/30 bg-white px-4 text-sm font-semibold text-[#5e1914] hover:border-[#5e1914]">
-              <Calculator className="h-4 w-4" />
-              Rates Calculator
+            <Link href="/admin/pricing" className="inline-flex h-9 items-center gap-2 border border-zinc-200 bg-white px-4 text-xs font-semibold text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">
+              <Calculator className="h-3.5 w-3.5" />
+              Rates
             </Link>
           </div>
-          <Link href="/admin/users" className="inline-flex h-10 items-center gap-2 text-sm font-medium text-zinc-600 hover:text-[#5e1914]">
-            <ShieldCheck className="h-4 w-4" />
-            Admin Help
-          </Link>
         </div>
         <div className="flex items-center justify-center gap-2 bg-[#5e1914] px-4 py-3 text-center text-sm text-white">
           <AlertCircle className="h-4 w-4" />
