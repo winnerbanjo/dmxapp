@@ -4,11 +4,11 @@
  */
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
   throw new Error(
-    "Please define MONGODB_URI in your .env.local file. Example: mongodb+srv://user:pass@cluster.mongodb.net/dmx"
+    "Please define MONGO_URI or MONGODB_URI in your environment. Example: mongodb+srv://user:pass@cluster.mongodb.net/dmx"
   );
 }
 

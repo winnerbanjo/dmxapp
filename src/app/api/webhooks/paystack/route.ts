@@ -3,7 +3,8 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { Decimal } from "@prisma/client/runtime/library";
 
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+const PAYSTACK_SECRET_KEY =
+  process.env.PAYSTACK_SECRET || process.env.PAYSTACK_SECRET_KEY;
 
 interface PaystackWebhookEvent {
   event: string;

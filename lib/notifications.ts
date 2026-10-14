@@ -10,10 +10,10 @@ const APP_NAME = "DMX Logistics";
 
 /** Email transporter (Nodemailer). Set SMTP in env. */
 function getTransporter() {
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT) || 587;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const host = process.env.EMAIL_HOST || process.env.SMTP_HOST;
+  const port = Number(process.env.EMAIL_PORT || process.env.SMTP_PORT) || 587;
+  const user = process.env.EMAIL_USERNAME || process.env.SMTP_USER;
+  const pass = process.env.EMAIL_PASSWORD || process.env.SMTP_PASS;
   if (!host || !user || !pass) {
     return null;
   }

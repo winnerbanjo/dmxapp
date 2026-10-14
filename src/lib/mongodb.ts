@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
   console.warn(
-    "[DMX] MONGODB_URI is not set. Database features will be disabled. Add MONGODB_URI to .env.local to connect."
+    "[DMX] MONGO_URI / MONGODB_URI is not set. Database features will be disabled. Add MONGO_URI to .env to connect."
   );
 }
 
