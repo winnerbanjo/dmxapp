@@ -60,7 +60,7 @@ export default function AdminMerchantsPage() {
         <CardHeader>
           <CardTitle className="text-zinc-900">Signups & verification</CardTitle>
           <CardDescription className="text-zinc-500">
-            Demo merchant list. Search by name and filter by Hub/City.
+            Live registered merchant database. Search by business name or filter by Hub.
           </CardDescription>
           <div className="mt-4 flex flex-wrap gap-4">
             <Input

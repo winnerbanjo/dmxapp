@@ -20,7 +20,7 @@ export default function AdminShipmentsPage() {
             All Shipments
           </h1>
           <p className="mt-1 text-sm text-zinc-500">
-            Global demo data. Use filters above the table.
+            Real-time DMX global shipments ledger. Filter by status or search by tracking number.
           </p>
         </div>
         <Link

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { CheckCircle2, LockKeyhole, Plus, Search, Shield, UserCog } from "lucide-react";
 
 type PermissionKey =
@@ -115,6 +115,38 @@ export default function AdminUserManagementPage() {
   const [selectedRoleId, setSelectedRoleId] = useState("ops-manager");
   const [query, setQuery] = useState("");
   const [newUser, setNewUser] = useState({ name: "", email: "", workspace: "DMX Admin", roleId: "ops-manager" });
+
+  useEffect(() => {
+    async function loadRealAdmins() {
+      try {
+        const res = await fetch("/api/legacy/resources/admins?limit=50");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.items) && data.items.length > 0) {
+            const mapped: UserRecord[] = data.items.map((admin: any) => ({
+              id: String(admin._id),
+              name: admin.Name || "DMX Administrator",
+              email: admin.EmailAddress,
+              roleId: admin.RoleGroup === "SuperAdmin" ? "owner" : "ops-manager",
+              workspace: "DMX Admin",
+              status: admin.Status === "ACTIVE" ? "Active" : "Suspended",
+              lastSeen: admin.DateCreated
+                ? new Date(admin.DateCreated).toLocaleDateString("en-NG", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : "Active",
+            }));
+            setUsers(mapped);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load real admins:", err);
+      }
+    }
+    loadRealAdmins();
+  }, []);
 
   const selectedRole = roles.find((role) => role.id === selectedRoleId) ?? roles[0];
   const filteredUsers = useMemo(() => {

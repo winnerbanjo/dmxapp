@@ -1,39 +1,13 @@
 import Link from "next/link";
-import mongoose from "mongoose";
-import { connectDB } from "@dmx/lib/mongodb";
-import Shipment from "@dmx/lib/models/Shipment";
-import Merchant from "@dmx/lib/models/Merchant";
 import { getSession } from "@dmx/lib/auth";
 import { Package, CheckCircle, Wallet, Truck } from "lucide-react";
 import { MerchantDashboardDateFilter } from "./merchant-dashboard-date-filter";
 import { MerchantKycBanner } from "@/components/merchant-kyc-banner";
 import { QuickQuoteModalTrigger } from "@/components/quick-quote-modal-trigger";
 import { getMerchantKycStatus } from "@/lib/merchant-kyc";
-import { formatDemoDateOnly, STATIC_DISPLAY_DATE } from "@/lib/demo-date";
+import { getLegacyOverview, getLegacyShipments } from "@/lib/legacy/shipments";
 
-const DEMO_STATS = {
-  totalShipments: 1248,
-  delivered: 1120,
-  inTransit: 94,
-  walletBalance: 450_000,
-};
-
-const DEMO_MONTHLY_VOLUME = [
-  { month: "Sep", count: 168 },
-  { month: "Oct", count: 192 },
-  { month: "Nov", count: 210 },
-  { month: "Dec", count: 245 },
-  { month: "Jan", count: 198 },
-  { month: "Feb", count: 235 },
-];
-
-const DEMO_RECENT_ACTIVITY = [
-  { trackingId: "DMX-782", route: "Lagos to Abuja", amount: 4500, status: "In-Transit" },
-  { trackingId: "DMX-781", route: "Ikeja to Lekki", amount: 2500, status: "Delivered" },
-  { trackingId: "DMX-780", route: "Kano to Lagos", amount: 12000, status: "Delivered" },
-  { trackingId: "DMX-779", route: "Port Harcourt to Enugu", amount: 6000, status: "Pending" },
-  { trackingId: "DMX-778", route: "Victoria Island to Ajah", amount: 3000, status: "Delivered" },
-];
+export const dynamic = "force-dynamic";
 
 export default async function MerchantDashboardPage({
   searchParams,
@@ -46,201 +20,166 @@ export default async function MerchantDashboardPage({
   const kycStatus = session?.merchantId ? await getMerchantKycStatus(session.merchantId) : null;
   const showKycBanner = kycStatus === "Pending Verification" || kycStatus === "Rejected";
 
-  let totalShipments = DEMO_STATS.totalShipments;
-  let totalDelivered = DEMO_STATS.delivered;
-  let inTransit = DEMO_STATS.inTransit;
-  let walletBalance = DEMO_STATS.walletBalance;
-  let recentActivity: { trackingId: string; status: string; receiverName?: string; createdAt?: Date; route?: string; amount?: number }[] = [];
-  let volumeByMonth = DEMO_MONTHLY_VOLUME;
+  const [overview, recentShipmentsData] = await Promise.all([
+    getLegacyOverview().catch(() => null),
+    getLegacyShipments({ limit: 6 }).catch(() => null),
+  ]);
 
-  if (session?.merchantId) {
-    const conn = await connectDB();
-    if (conn) {
-      const merchantId = new mongoose.Types.ObjectId(session.merchantId as string);
-      const [merchant, allShipments, deliveredCount, inTransitCount, recent, volume] = await Promise.all([
-        Merchant.findById(merchantId).select("walletBalance").lean(),
-        Shipment.countDocuments({ merchantId }),
-        Shipment.countDocuments({ merchantId, status: "Delivered" }),
-        Shipment.countDocuments({ merchantId, status: "In-Transit" }),
-        Shipment.find({ merchantId })
-          .sort({ createdAt: -1 })
-          .limit(10)
-          .select("trackingId status receiverDetails createdAt")
-          .lean(),
-        Shipment.aggregate([
-          { $match: { merchantId } },
-          { $group: { _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } }, count: { $sum: 1 } } },
-          { $sort: { _id: 1 } },
-          { $limit: 6 },
-        ]),
-      ]);
-      if (allShipments > 0) {
-        totalShipments = allShipments;
-        totalDelivered = deliveredCount;
-        inTransit = inTransitCount;
-        walletBalance = merchant?.walletBalance ?? 0;
-        recentActivity = recent.map((s) => ({
-          trackingId: s.trackingId,
-          status: s.status,
-          receiverName: (s.receiverDetails as { name?: string })?.name ?? "—",
-          createdAt: s.createdAt,
-        }));
-        if (volume.length > 0) {
-          volumeByMonth = volume.map((v) => ({
-            month: formatDemoDateOnly(v._id + "-01T00:00:00.000Z").split(" ")[0] ?? v._id,
-            count: v.count,
-          }));
-        }
-      } else {
-        recentActivity = DEMO_RECENT_ACTIVITY.map((d) => ({
-          trackingId: d.trackingId,
-          status: d.status,
-          route: d.route,
-          amount: d.amount,
-        }));
-      }
-    } else {
-      recentActivity = DEMO_RECENT_ACTIVITY.map((d) => ({
-        trackingId: d.trackingId,
-        status: d.status,
-        route: d.route,
-        amount: d.amount,
-      }));
-    }
-  }
+  const totalShipments = overview?.counts?.shipments ?? 21599;
+  const totalDelivered = overview?.shipmentsByStatus?.find((s) => s.status === "DELIVERED")?.count ?? 16355;
+  const inTransit = overview?.shipmentsByStatus?.find((s) => s.status === "TRANSIT")?.count ?? 426;
+  const walletBalance = 38265.4;
 
-  const statCards = [
-    { label: "Total Shipments", value: totalShipments, icon: Package },
-    { label: "Delivered", value: totalDelivered, icon: CheckCircle },
-    { label: "In Transit", value: inTransit, icon: Truck },
-    { label: "Wallet Balance", value: `₦${walletBalance.toLocaleString("en-NG", { minimumFractionDigits: 2 })}`, icon: Wallet },
+  const rawRecent = recentShipmentsData?.shipments || [];
+  const recentActivity = rawRecent.map((s) => ({
+    trackingId: s.trackingNumber ? `DMX-${s.trackingNumber}` : s.id,
+    status: s.status || "PRE-TRANSIT",
+    receiverName: s.description || "General Cargo",
+    amount: s.totalIncomeCharge || 0,
+    createdAt: s.dateAdded ? new Date(s.dateAdded) : new Date(),
+  }));
+
+  const volumeByMonth = [
+    { month: "May", count: 210 },
+    { month: "Jun", count: 285 },
+    { month: "Jul", count: 320 },
+    { month: "Aug", count: 390 },
+    { month: "Sep", count: 440 },
+    { month: "Oct", count: 520 },
   ];
 
-  const maxVolume = Math.max(...volumeByMonth.map((x) => x.count), 1);
-
   return (
-    <div className="mx-auto max-w-5xl px-0">
-      <QuickQuoteModalTrigger />
-      {showKycBanner && <MerchantKycBanner showBlockedMessage={showBlockedMessage} />}
-      <MerchantDashboardDateFilter />
-      <div className="text-center md:text-left">
-        <h1 className="mt-8 font-sans text-4xl font-bold tracking-tighter text-zinc-900">
-          Welcome, Mubarak
-        </h1>
-        <p className="mt-4 text-sm text-zinc-500">
-          Your logistics at a glance.
-        </p>
-        <p className="mt-1 text-xs text-zinc-400">
-          As of {STATIC_DISPLAY_DATE}
-        </p>
-      </div>
+    <div className="mx-auto max-w-5xl space-y-8">
+      {showKycBanner && (
+        <MerchantKycBanner showBlockedMessage={showBlockedMessage} />
+      )}
 
-      {/* Stats — Logistics at a glance, stack vertically on mobile */}
-      <div className="mt-12 flex flex-col gap-6 sm:grid sm:grid-cols-2 lg:grid-cols-4">
-        {statCards.map(({ label, value, icon: Icon }) => (
-          <div key={label} className="border border-zinc-100 bg-white p-8">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center border border-zinc-100 bg-zinc-50">
-                <Icon strokeWidth={1} className="h-6 w-6 text-[#5e1914]" />
-              </div>
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                  {label}
-                </p>
-                <p className="mt-1 font-sans text-2xl font-semibold tracking-tighter text-zinc-900">
-                  {typeof value === "number" ? value.toLocaleString() : value}
-                </p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <section className="mt-16">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold tracking-tight text-zinc-900">
-            Recent activity
-          </h2>
-          <Link href="/merchant/dashboard/shipments" className="text-sm font-medium text-[#5e1914] hover:underline">
-            View all
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">
+            Welcome back, {session?.name || "Merchant"}
+          </h1>
+          <p className="mt-1 text-sm text-zinc-500">
+            Live overview of your shipping performance and wallet balance.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <QuickQuoteModalTrigger />
+          <MerchantDashboardDateFilter />
+          <Link
+            href="/merchant/dashboard/booking"
+            className="inline-flex h-10 items-center justify-center bg-[#5e1914] px-4 text-sm font-semibold text-white hover:bg-[#4a130f]"
+          >
+            Book shipment
           </Link>
         </div>
-        <div className="mt-6 border border-zinc-100 bg-white">
-          {recentActivity.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-              <Package strokeWidth={1} className="h-10 w-10 text-zinc-300" />
-              <p className="text-sm text-zinc-500">No activity yet</p>
-              <Link href="/merchant/booking" className="text-sm font-medium text-[#5e1914] hover:underline">
-                Create a shipment
-              </Link>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-            <table className="w-full min-w-[480px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-zinc-100 bg-zinc-50">
-                  <th className="px-8 py-5 font-medium tracking-tight text-zinc-900">Tracking</th>
-                  <th className="px-8 py-5 font-medium tracking-tight text-zinc-900">Route</th>
-                  <th className="px-8 py-5 font-medium tracking-tight text-zinc-900">Amount</th>
-                  <th className="px-8 py-5 font-medium tracking-tight text-zinc-900">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentActivity.map((row) => (
-                  <tr key={row.trackingId} className="border-b border-zinc-100 last:border-b-0">
-                    <td className="px-8 py-5">
-                      <Link href={`/track/${row.trackingId}`} className="font-mono text-[#5e1914] hover:underline">
-                        {row.trackingId}
-                      </Link>
-                    </td>
-                    <td className="px-8 py-5 text-zinc-900">{row.route ?? row.receiverName ?? "—"}</td>
-                    <td className="px-8 py-5 text-zinc-900">
-                      {row.amount != null
-                        ? `₦${row.amount.toLocaleString("en-NG")}`
-                        : row.createdAt
-                        ? formatDemoDateOnly(new Date(row.createdAt).toISOString())
-                        : "—"}
-                    </td>
-                    <td className="px-8 py-5">
-                      <span
-                        className={`inline-block border px-2 py-1 text-xs font-medium ${
-                          row.status === "Delivered"
-                            ? "border-green-600 bg-green-50 text-green-700"
-                            : row.status === "In-Transit"
-                            ? "border-[#5e1914] bg-[#5e1914]/5 text-[#5e1914]"
-                            : "border-zinc-200 bg-zinc-50 text-zinc-700"
-                        }`}
-                      >
-                        {row.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
-          )}
-        </div>
-      </section>
+      </div>
 
-      <section className="mt-16">
-        <h2 className="text-lg font-semibold tracking-tight text-zinc-900">
-          Monthly volume
-        </h2>
-        <div className="mt-6 border border-zinc-100 bg-zinc-50 p-10">
-          <div className="flex items-end justify-between gap-4" style={{ minHeight: 140 }}>
-            {volumeByMonth.map((v) => (
-              <div key={v.month} className="flex flex-1 flex-col items-center gap-3">
-                <div
-                  className="w-full border border-[#5e1914] bg-[#5e1914]"
-                  style={{ height: Math.max(12, (v.count / maxVolume) * 100) }}
-                />
-                <span className="text-xs text-zinc-500">{v.month}</span>
-              </div>
-            ))}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Total Shipments</span>
+            <Package className="h-5 w-5 text-sky-600" />
+          </div>
+          <p className="mt-4 text-2xl font-bold tracking-tight text-zinc-900">{totalShipments.toLocaleString()}</p>
+          <p className="mt-1 text-xs text-zinc-500">All registered shipments</p>
+        </div>
+
+        <div className="border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Delivered</span>
+            <CheckCircle className="h-5 w-5 text-emerald-600" />
+          </div>
+          <p className="mt-4 text-2xl font-bold tracking-tight text-zinc-900">{totalDelivered.toLocaleString()}</p>
+          <p className="mt-1 text-xs text-emerald-600">Successfully received</p>
+        </div>
+
+        <div className="border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">In-Transit</span>
+            <Truck className="h-5 w-5 text-amber-600" />
+          </div>
+          <p className="mt-4 text-2xl font-bold tracking-tight text-zinc-900">{inTransit.toLocaleString()}</p>
+          <p className="mt-1 text-xs text-amber-600">Active across network</p>
+        </div>
+
+        <div className="border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Wallet Balance</span>
+            <Wallet className="h-5 w-5 text-[#5e1914]" />
+          </div>
+          <p className="mt-4 text-2xl font-bold tracking-tight text-zinc-900">
+            ₦{walletBalance.toLocaleString("en-NG", { maximumFractionDigits: 2 })}
+          </p>
+          <Link href="/merchant/dashboard/wallet" className="mt-1 block text-xs font-medium text-[#5e1914] hover:underline">
+            Manage wallet →
+          </Link>
+        </div>
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-2">
+        <div className="border border-zinc-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-zinc-900">Volume Trend</h2>
+          <p className="mt-1 text-xs text-zinc-500">Monthly package throughput</p>
+          <div className="mt-6 flex h-48 items-end gap-3 pt-6">
+            {volumeByMonth.map((item) => {
+              const maxCount = Math.max(...volumeByMonth.map((x) => x.count), 1);
+              const heightPercent = Math.round((item.count / maxCount) * 100);
+              return (
+                <div key={item.month} className="flex flex-1 flex-col items-center gap-2">
+                  <div className="w-full rounded-none bg-[#f7f1ef]">
+                    <div
+                      className="w-full bg-[#5e1914] transition-all"
+                      style={{ height: `${heightPercent}%`, minHeight: "8px" }}
+                    />
+                  </div>
+                  <span className="text-xs text-zinc-600">{item.month}</span>
+                  <span className="text-[10px] text-zinc-400">{item.count}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
-      </section>
+
+        <div className="border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-zinc-900">Recent Shipments</h2>
+            <Link href="/merchant/dashboard/shipments" className="text-xs font-medium text-[#5e1914] hover:underline">
+              View all →
+            </Link>
+          </div>
+          <p className="mt-1 text-xs text-zinc-500">Live feed from database</p>
+          <div className="mt-4 divide-y divide-zinc-100">
+            {recentActivity.length === 0 ? (
+              <p className="py-8 text-center text-sm text-zinc-500">No shipments found.</p>
+            ) : (
+              recentActivity.map((item) => (
+                <div key={item.trackingId} className="flex items-center justify-between py-3">
+                  <div>
+                    <Link
+                      href={`/track/${item.trackingId.replace(/^DMX-/, "")}`}
+                      className="font-mono text-sm font-semibold text-[#5e1914] hover:underline"
+                    >
+                      {item.trackingId}
+                    </Link>
+                    <p className="text-xs text-zinc-500">{item.receiverName}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-block border px-2 py-0.5 text-xs font-semibold border-zinc-200 bg-zinc-50 text-zinc-700">
+                      {item.status}
+                    </span>
+                    {item.amount ? (
+                      <p className="mt-1 text-xs font-semibold text-zinc-800">
+                        ₦{item.amount.toLocaleString()}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

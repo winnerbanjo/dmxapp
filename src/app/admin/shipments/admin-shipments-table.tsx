@@ -1,95 +1,118 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Copy, FileText, MoreHorizontal, Save, Search } from "lucide-react";
-import { ADMIN_DEMO_SHIPMENTS } from "@/data/demo-shipments";
-import type { DemoShipment } from "@/data/demo-shipments";
+import { Copy, FileText, Loader2, RefreshCw, Search } from "lucide-react";
+
+interface RealShipment {
+  id: string;
+  trackingNumber: string | number | null;
+  dhlTrackingNumber: string | null;
+  description: string | null;
+  type: string | null;
+  status: string | null;
+  totalWeight: number | null;
+  totalIncomeCharge: number | null;
+  branchId: string | null;
+  userId: string | null;
+  dateAdded: string | null;
+}
 
 const STATUS_OPTIONS = [
   "All statuses",
-  "Pending",
-  "Picked up",
-  "In transit",
-  "Sitting at Hub",
-  "Out for delivery",
-  "Delivered",
+  "PRE-TRANSIT",
+  "TRANSIT",
+  "DELIVERED",
+  "CANCELED",
+  "FAILED",
+  "RETURNED",
+  "CREATED",
 ];
 
-function statusClass(status: string): string {
-  const s = status.toLowerCase();
+function statusClass(status?: string | null): string {
+  const s = (status || "").toLowerCase();
   if (s.includes("delivered")) return "border-green-600 bg-green-50 text-green-700";
-  if (s.includes("transit") || s.includes("delivery") || s.includes("picked")) return "border-[#5e1914] bg-[#5e1914]/10 text-[#5e1914]";
-  if (s.includes("sitting") || s.includes("hub")) return "border-[#5e1914] bg-[#5e1914]/10 text-[#5e1914]";
-  if (s.includes("draft")) return "border-amber-500 bg-amber-50 text-amber-700";
+  if (s.includes("transit") || s.includes("delivery") || s.includes("picked"))
+    return "border-[#5e1914] bg-[#5e1914]/10 text-[#5e1914]";
+  if (s.includes("pre-transit") || s.includes("created"))
+    return "border-amber-500 bg-amber-50 text-amber-700";
+  if (s.includes("cancel") || s.includes("fail"))
+    return "border-red-500 bg-red-50 text-red-700";
   return "border-zinc-200 bg-zinc-50 text-zinc-700";
+}
+
+function money(val?: number | null) {
+  if (typeof val !== "number" || isNaN(val)) return "—";
+  return `₦${val.toLocaleString("en-NG", { maximumFractionDigits: 2 })}`;
 }
 
 export function AdminShipmentsTable() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All statuses");
-  const [shipments, setShipments] = useState<DemoShipment[]>(ADMIN_DEMO_SHIPMENTS);
-  const [feedback, setFeedback] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit] = useState(25);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [shipments, setShipments] = useState<RealShipment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const filtered = useMemo(() => {
-    let list = shipments;
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      list = list.filter(
-        (s) =>
-          s.trackingId.toLowerCase().includes(q) ||
-          s.merchant.toLowerCase().includes(q)
-      );
+  const fetchShipments = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+      if (search.trim()) params.set("search", search.trim());
+      if (status !== "All statuses") params.set("status", status);
+
+      const res = await fetch(`/api/legacy/shipments?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setShipments(data.shipments || []);
+        setTotal(data.total || 0);
+        setTotalPages(data.totalPages || 1);
+      }
+    } catch (err) {
+      console.error("Failed to load real shipments:", err);
+    } finally {
+      setLoading(false);
     }
-    if (status !== "All statuses") {
-      list = list.filter((s) => s.status === status);
-    }
-    return list;
-  }, [search, shipments, status]);
+  }, [page, limit, search, status]);
 
-  function clearFilters() {
-    setSearch("");
-    setStatus("All statuses");
-  }
+  useEffect(() => {
+    fetchShipments();
+  }, [fetchShipments]);
 
-  const hasActiveFilters = search.trim() !== "" || status !== "All statuses";
-
-  function duplicateShipment(shipment: DemoShipment) {
-    const copy: DemoShipment = {
-      ...shipment,
-      id: `draft-${Date.now()}`,
-      trackingId: `${shipment.trackingId}-COPY`,
-      status: "Draft",
-    };
-    setShipments((current) => [copy, ...current]);
-    setFeedback(`${shipment.trackingId} duplicated as draft.`);
-  }
-
-  function saveAsDraft(shipment: DemoShipment) {
-    setShipments((current) =>
-      current.map((item) =>
-        item.id === shipment.id ? { ...item, status: "Draft" } : item,
-      ),
-    );
-    setFeedback(`${shipment.trackingId} saved as draft.`);
+  function copyTracking(tracking: string) {
+    navigator.clipboard.writeText(tracking);
+    setCopiedId(tracking);
+    setTimeout(() => setCopiedId(null), 2000);
   }
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3 border border-zinc-200 bg-white p-4">
-        <div className="flex h-10 min-w-[220px] flex-1 items-center border border-zinc-200 bg-white focus-within:border-[#5e1914] focus-within:ring-1 focus-within:ring-[#5e1914]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border border-zinc-200 bg-white p-4">
+        <div className="flex h-10 min-w-[240px] flex-1 items-center border border-zinc-200 bg-white focus-within:border-[#5e1914] focus-within:ring-1 focus-within:ring-[#5e1914]">
           <Search className="ml-3 h-4 w-4 text-zinc-400" />
           <input
             type="search"
-            placeholder="Search by ID or Name"
+            placeholder="Search by Tracking Number or Description..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             className="h-full flex-1 border-0 bg-transparent px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0"
           />
         </div>
         <select
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          onChange={(e) => {
+            setStatus(e.target.value);
+            setPage(1);
+          }}
           className="h-10 rounded-none border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-[#5e1914] focus:outline-none focus:ring-1 focus:ring-[#5e1914]"
         >
           {STATUS_OPTIONS.map((opt) => (
@@ -98,104 +121,120 @@ export function AdminShipmentsTable() {
             </option>
           ))}
         </select>
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="rounded-none border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]"
-          >
-            Clear Filters
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => fetchShipments()}
+          disabled={loading}
+          className="flex h-10 items-center gap-2 border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914] disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          Refresh
+        </button>
       </div>
-      {feedback ? (
-        <div className="mt-4 border border-[#5e1914]/20 bg-[#f7f1ef] px-4 py-3 text-sm font-medium text-[#5e1914]">
-          {feedback}
-        </div>
-      ) : null}
 
-      <div className="mt-4 overflow-hidden rounded-none border border-zinc-200 bg-white">
-        <table className="w-full min-w-[1320px] text-left text-sm">
+      <div className="mt-3 flex items-center justify-between text-xs text-zinc-500">
+        <span>
+          Showing {shipments.length} of {total.toLocaleString()} live shipments
+        </span>
+        <span>
+          Page {page} of {totalPages}
+        </span>
+      </div>
+
+      <div className="mt-2 overflow-x-auto border border-zinc-200 bg-white">
+        <table className="w-full min-w-[1000px] text-left text-sm">
           <thead>
             <tr className="border-b border-zinc-200 bg-zinc-50">
-              <th className="px-8 py-5 font-medium font-sans tracking-tight text-zinc-900">Tracking ID</th>
-              <th className="px-8 py-5 font-medium font-sans tracking-tight text-zinc-900">Merchant</th>
-              <th className="px-8 py-5 font-medium font-sans tracking-tight text-zinc-900">Origin</th>
-              <th className="px-8 py-5 font-medium font-sans tracking-tight text-zinc-900">Destination</th>
-              <th className="px-8 py-5 font-medium font-sans tracking-tight text-zinc-900">Weight</th>
-              <th className="px-8 py-5 font-medium font-sans tracking-tight text-zinc-900">Selling Price</th>
-              <th className="px-8 py-5 font-medium font-sans tracking-tight text-zinc-900">Carrier Cost</th>
-              <th className="px-8 py-5 font-medium font-sans tracking-tight text-zinc-900">Net Profit</th>
-              <th className="px-8 py-5 font-medium font-sans tracking-tight text-zinc-900">Status</th>
-              <th className="px-8 py-5 font-medium font-sans tracking-tight text-zinc-900">Actions</th>
+              <th className="px-6 py-4 font-semibold text-zinc-900">Tracking Number</th>
+              <th className="px-6 py-4 font-semibold text-zinc-900">Description</th>
+              <th className="px-6 py-4 font-semibold text-zinc-900">Type</th>
+              <th className="px-6 py-4 font-semibold text-zinc-900">Weight</th>
+              <th className="px-6 py-4 font-semibold text-zinc-900">Revenue (Charge)</th>
+              <th className="px-6 py-4 font-semibold text-zinc-900">Status</th>
+              <th className="px-6 py-4 font-semibold text-zinc-900">Date Added</th>
+              <th className="px-6 py-4 font-semibold text-zinc-900">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {loading ? (
               <tr>
-                <td colSpan={10} className="px-8 py-16 text-center text-sm text-zinc-500">
-                  No matches found
+                <td colSpan={8} className="px-6 py-16 text-center">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-[#5e1914]" />
+                    <span className="text-sm text-zinc-500">Loading live shipments from database...</span>
+                  </div>
+                </td>
+              </tr>
+            ) : shipments.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-6 py-16 text-center text-sm text-zinc-500">
+                  No shipments found matching criteria.
                 </td>
               </tr>
             ) : (
-              filtered.map((s) => {
-                const netProfit = s.amount - s.partnerCost;
-                const marginPercent = s.amount > 0 ? (netProfit / s.amount) * 100 : 0;
-                const meetsTarget = marginPercent >= 20;
+              shipments.map((s) => {
+                const trackingStr = s.trackingNumber ? String(s.trackingNumber) : s.id;
+                const formattedDate = s.dateAdded
+                  ? new Date(s.dateAdded).toLocaleDateString("en-NG", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : "—";
+
                 return (
-                  <tr key={s.id} className="border-b border-zinc-200 last:border-b-0">
-                    <td className="px-8 py-5">
-                      <Link href={`/admin/shipments/${encodeURIComponent(s.trackingId)}`} className="font-mono font-sans text-[#5e1914] hover:underline">
-                        {s.trackingId}
-                      </Link>
-                    </td>
-                    <td className="px-8 py-5 font-sans text-zinc-900">{s.merchant}</td>
-                    <td className="px-8 py-5 font-sans text-zinc-600">{s.origin}</td>
-                    <td className="px-8 py-5 font-sans text-zinc-900">{s.destination}</td>
-                    <td className="px-8 py-5 font-sans text-zinc-600">{s.weightKg} kg</td>
-                    <td className="px-8 py-5 font-sans text-zinc-900">₦{s.amount.toLocaleString("en-NG")}</td>
-                    <td className="px-8 py-5 font-sans text-zinc-600">₦{s.partnerCost.toLocaleString("en-NG")}</td>
-                    <td className="px-8 py-5">
-                      <span className={`font-sans font-medium ${meetsTarget ? "text-[#5e1914]" : "text-zinc-700"}`}>
-                        ₦{netProfit.toLocaleString("en-NG")}
-                      </span>
-                    </td>
-                    <td className="px-8 py-5">
-                      <span className={`inline-block border px-2 py-1 text-xs font-medium font-sans ${statusClass(s.status)}`}>
-                        {s.status}
-                      </span>
-                    </td>
-                    <td className="px-8 py-5">
-                      <div className="flex flex-wrap gap-2">
+                  <tr key={s.id} className="border-b border-zinc-100 hover:bg-zinc-50/80">
+                    <td className="px-6 py-4 font-medium text-zinc-900">
+                      <div className="flex items-center gap-2">
                         <Link
-                          href={`/admin/shipments/${encodeURIComponent(s.trackingId)}`}
-                          className="inline-flex items-center gap-2 border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]"
+                          href={`/track/${trackingStr}`}
+                          className="font-semibold text-[#5e1914] hover:underline"
                         >
-                          <MoreHorizontal className="h-4 w-4" />
-                          Details
+                          {trackingStr}
                         </Link>
                         <button
                           type="button"
-                          onClick={() => duplicateShipment(s)}
-                          className="inline-flex items-center gap-2 border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]"
+                          onClick={() => copyTracking(trackingStr)}
+                          className="text-zinc-400 hover:text-zinc-700"
+                          title="Copy tracking"
                         >
-                          <Copy className="h-4 w-4" />
-                          Duplicate
+                          <Copy className="h-3.5 w-3.5" />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => saveAsDraft(s)}
-                          className="inline-flex items-center gap-2 border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]"
-                        >
-                          <Save className="h-4 w-4" />
-                          Save draft
-                        </button>
+                        {copiedId === trackingStr ? (
+                          <span className="text-[10px] text-emerald-600">Copied!</span>
+                        ) : null}
+                      </div>
+                      {s.dhlTrackingNumber ? (
+                        <p className="text-[11px] text-zinc-400">DHL: {s.dhlTrackingNumber}</p>
+                      ) : null}
+                    </td>
+                    <td className="px-6 py-4 text-zinc-700 max-w-[220px] truncate">
+                      {s.description || "General Package"}
+                    </td>
+                    <td className="px-6 py-4 text-zinc-600">{s.type || "Export"}</td>
+                    <td className="px-6 py-4 text-zinc-600">
+                      {s.totalWeight ? `${s.totalWeight} kg` : "—"}
+                    </td>
+                    <td className="px-6 py-4 font-semibold text-zinc-900">
+                      {money(s.totalIncomeCharge)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-block rounded-none border px-2.5 py-1 text-xs font-semibold ${statusClass(
+                          s.status
+                        )}`}
+                      >
+                        {s.status || "PRE-TRANSIT"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-zinc-500 text-xs">{formattedDate}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
                         <Link
-                          href={`/admin/booking?duplicate=${encodeURIComponent(s.trackingId)}`}
-                          className="inline-flex items-center gap-2 border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]"
+                          href={`/track/${trackingStr}`}
+                          className="border border-zinc-200 px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]"
                         >
-                          <FileText className="h-4 w-4" />
-                          Rebook
+                          Track
                         </Link>
                       </div>
                     </td>
@@ -206,6 +245,30 @@ export function AdminShipmentsTable() {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 ? (
+        <div className="mt-4 flex items-center justify-between">
+          <button
+            type="button"
+            disabled={page <= 1 || loading}
+            onClick={() => setPage((p) => Math.max(p - 1, 1))}
+            className="border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-40"
+          >
+            ← Previous
+          </button>
+          <span className="text-sm text-zinc-600">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={page >= totalPages || loading}
+            onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+            className="border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-40"
+          >
+            Next →
+          </button>
+        </div>
+      ) : null}
     </>
   );
 }

@@ -8,6 +8,7 @@ const JWT_SECRET = new TextEncoder().encode(
 export interface JWTPayload {
   merchantId: string;
   email: string;
+  name?: string;
   isVerified: boolean;
   exp?: number;
 }

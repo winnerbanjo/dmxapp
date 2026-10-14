@@ -2,22 +2,40 @@ import { getSession } from "@dmx/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ShipmentsWithSearch } from "./shipments-with-search";
-import { DEMO_SHIPMENTS } from "./demo-shipments";
+import { getLegacyShipments } from "@/lib/legacy/shipments";
+
+export const dynamic = "force-dynamic";
 
 export default async function MerchantShipmentsPage() {
   const session = await getSession();
   if (!session?.merchantId || !session.isVerified) redirect("/merchant/login");
 
-  const list = DEMO_SHIPMENTS.map((d) => ({
-    id: d.id,
-    trackingId: d.trackingId,
-    receiverName: d.receiverName,
-    receiverPhone: d.receiverPhone,
-    status: d.status,
-    packageWeight: d.packageWeight,
-    cost: d.cost,
-    createdAt: d.createdAt,
-  }));
+  let list: Array<{
+    id: string;
+    trackingId: string;
+    receiverName: string;
+    receiverPhone: string;
+    status: string;
+    packageWeight: number;
+    cost: number;
+    createdAt: string;
+  }> = [];
+
+  try {
+    const data = await getLegacyShipments({ limit: 50 });
+    list = data.shipments.map((d) => ({
+      id: d.id,
+      trackingId: d.trackingNumber ? `DMX-${d.trackingNumber}` : d.id,
+      receiverName: d.description || "International Shipment",
+      receiverPhone: "—",
+      status: d.status || "PRE-TRANSIT",
+      packageWeight: d.totalWeight || 1,
+      cost: d.totalIncomeCharge || 0,
+      createdAt: d.dateAdded || new Date().toISOString(),
+    }));
+  } catch (err) {
+    console.error("[MerchantShipments] Failed to load shipments:", err);
+  }
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -27,7 +45,7 @@ export default async function MerchantShipmentsPage() {
             Shipments
           </h1>
           <p className="mt-2 text-sm text-zinc-500">
-            The ledger. View and track all shipments.
+            Live database ledger. View and track all shipments in real time.
           </p>
         </div>
         <Link
