@@ -56,7 +56,9 @@ export async function getLegacyShipments(options?: {
 
   if (options?.search) {
     const search = options.search.trim();
+    const asNum = Number(search);
     query.$or = [
+      ...(Number.isFinite(asNum) ? [{ TrackingNumber: asNum }] : []),
       { TrackingNumber: { $regex: search, $options: "i" } },
       { DHLTrackingNumber: { $regex: search, $options: "i" } },
       { Description: { $regex: search, $options: "i" } },

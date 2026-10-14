@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Check, Copy, Edit3, Mail, MapPin, Package, Phone, RefreshCw, ShieldCheck, Trash2, Upload, X } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import Link from "next/link";
+import { Check, Copy, Edit3, Loader2, Mail, MapPin, Package, Phone, RefreshCw, ShieldCheck, Trash2, Upload, X } from "lucide-react";
 
 type Step = "sender" | "receiver" | "items" | "carrier" | "addons" | "review";
 
@@ -35,8 +36,10 @@ type Rate = {
   pickup: string;
   delivery: string;
   amount: number;
+  carrierCode?: string;
   tags?: string[];
   recommended?: boolean;
+  isLive?: boolean;
 };
 
 const steps: { id: Step; label: string }[] = [
@@ -124,30 +127,119 @@ export function AdminBookingFlow() {
   const [showItemModal, setShowItemModal] = useState(false);
   const [itemDraft, setItemDraft] = useState<ParcelItem>({ name: "Men's cotton trousers", hsCode: "6113009038", weight: 10, quantity: 1, value: 200000, origin: "Nigeria" });
   const [ratesLoaded, setRatesLoaded] = useState(false);
+  const [loadingRates, setLoadingRates] = useState(false);
+  const [isLiveDhl, setIsLiveDhl] = useState(false);
+  const [rates, setRates] = useState<Rate[]>(baseRates);
   const [selectedRateId, setSelectedRateId] = useState("dhl");
   const [dropoffOpen, setDropoffOpen] = useState(false);
   const [pickupMode, setPickupMode] = useState<"pickup" | "dropoff">("pickup");
   const [selectedBranch, setSelectedBranch] = useState(0);
   const [insurance, setInsurance] = useState(true);
   const [confirmed, setConfirmed] = useState(false);
+  const [bookingPending, setBookingPending] = useState(false);
+  const [confirmedShipment, setConfirmedShipment] = useState<{
+    trackingNumber: string | number;
+    shipmentId: string;
+    status: string;
+    carrier: string;
+    date: string;
+  } | null>(null);
 
   const volumetricWeight = useMemo(() => Number(((length * width * height) / 5000).toFixed(2)), [length, width, height]);
   const actualWeight = useMemo(() => items.reduce((sum, item) => sum + item.weight * item.quantity, 0), [items]);
   const chargeableWeight = Math.max(actualWeight, volumetricWeight);
   const parcelValue = items.reduce((sum, item) => sum + item.value * item.quantity, 0);
-  const adjustedRates = baseRates.map((rate) => ({
-    ...rate,
-    amount: Math.round((rate.amount + Math.max(0, chargeableWeight - 8) * 3200) * 100) / 100,
-  }));
-  const selectedRate = adjustedRates.find((rate) => rate.id === selectedRateId) ?? adjustedRates[0];
+
+  const selectedRate = rates.find((rate) => rate.id === selectedRateId) ?? rates[0];
   const insuranceFee = insurance ? Math.round(parcelValue * 0.033) : 0;
   const customsCharge = receiver.country.toLowerCase() === "nigeria" ? 0 : Math.round(parcelValue * 0.025);
   const serviceCharge = 500;
   const total = selectedRate.amount + insuranceFee + customsCharge + serviceCharge;
 
+  async function fetchLiveRates() {
+    setLoadingRates(true);
+    try {
+      const res = await fetch("/api/carriers/rate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          originCountry: sender.country,
+          originState: sender.state,
+          originCity: sender.city,
+          originPostalCode: sender.postalCode,
+          originAddress: sender.address1,
+          destinationCountry: receiver.country,
+          destinationState: receiver.state,
+          destinationCity: receiver.city,
+          destinationPostalCode: receiver.postalCode,
+          destinationAddress: receiver.address1,
+          weightKg: chargeableWeight,
+          length,
+          width,
+          height,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.rates) && data.rates.length > 0) {
+        setRates(data.rates);
+        setIsLiveDhl(Boolean(data.isLiveDhl));
+        setRatesLoaded(true);
+      }
+    } catch (err) {
+      console.error("[BookingFlow] Error fetching live rates:", err);
+    } finally {
+      setLoadingRates(false);
+    }
+  }
+
   function go(next: Step) {
+    if (next === "carrier" && !ratesLoaded && !loadingRates) {
+      fetchLiveRates();
+    }
     setStep(next);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function handleBookShipment() {
+    setBookingPending(true);
+    try {
+      const res = await fetch("/api/shipments/book", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sender,
+          receiver,
+          items,
+          packaging,
+          length,
+          width,
+          height,
+          chargeableWeight,
+          selectedRate,
+          pickupMode,
+          total,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setConfirmedShipment({
+          trackingNumber: data.trackingNumber,
+          shipmentId: data.shipmentId,
+          status: data.status,
+          carrier: data.carrier,
+          date: data.date,
+        });
+        setConfirmed(true);
+      } else {
+        alert(data.message || "Failed to book shipment");
+      }
+    } catch (err) {
+      console.error("[BookingFlow] Booking failed:", err);
+      alert("Error booking shipment. Please try again.");
+    } finally {
+      setBookingPending(false);
+    }
   }
 
   function saveItem() {
@@ -156,17 +248,44 @@ export function AdminBookingFlow() {
   }
 
   if (confirmed) {
+    const trackingDisplay = confirmedShipment?.trackingNumber
+      ? `DMX-${confirmedShipment.trackingNumber}`
+      : "DMX-132718";
+
     return (
       <div className="mx-auto max-w-6xl px-8 py-8">
-        <div className="flex items-start justify-between border-b border-zinc-100 pb-8">
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-100 pb-8">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">SH-1VFW8X8RFANKK4JJ</h1>
-              <Copy className="h-4 w-4 text-zinc-400" />
+              <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">{trackingDisplay}</h1>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(String(confirmedShipment?.trackingNumber ?? "132718"));
+                  alert("Tracking number copied to clipboard!");
+                }}
+                className="hover:text-zinc-700"
+              >
+                <Copy className="h-4 w-4 text-zinc-400" />
+              </button>
             </div>
-            <p className="mt-2 text-sm text-zinc-500">Confirmed · Jun 27, 2026 12:38 PM</p>
+            <p className="mt-2 text-sm text-zinc-500">
+              Live Verified Booking · Status: <span className="font-semibold text-emerald-600">PRE-TRANSIT</span> · {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+            </p>
           </div>
-          <button className="rounded-none bg-[#5e1914] px-5 py-3 text-sm font-semibold text-white hover:bg-[#4a130f]">Track shipment</button>
+          <div className="flex gap-3">
+            <Link
+              href={`/track/${confirmedShipment?.trackingNumber ?? "132718"}`}
+              className="rounded-none bg-[#5e1914] px-5 py-3 text-sm font-semibold text-white hover:bg-[#4a130f]"
+            >
+              Track shipment
+            </Link>
+            <Link
+              href="/admin/shipments"
+              className="border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+            >
+              View in Shipments
+            </Link>
+          </div>
         </div>
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
           <div className="space-y-6">
@@ -305,16 +424,39 @@ export function AdminBookingFlow() {
                 </div>
                 <div className="flex items-center gap-3">
                   <button className="border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-700">Sort by: Default</button>
-                  <button onClick={() => setRatesLoaded(true)} className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-[#5e1914]"><RefreshCw className="h-4 w-4" /> Get rates</button>
+                  <button
+                    onClick={() => fetchLiveRates()}
+                    disabled={loadingRates}
+                    className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-[#5e1914] hover:bg-[#f6f1ea] disabled:opacity-50"
+                  >
+                    {loadingRates ? <Loader2 className="h-4 w-4 animate-spin text-[#5e1914]" /> : <RefreshCw className="h-4 w-4" />}
+                    {loadingRates ? "Fetching live rates..." : "Get rates"}
+                  </button>
                 </div>
               </div>
               {!ratesLoaded ? (
                 <div className="mt-6 border border-dashed border-zinc-200 p-10 text-center">
-                  <p className="text-sm text-zinc-500">Pricing is the last lookup. Click Get rates after sender, receiver, and parcel details are ready.</p>
+                  {loadingRates ? (
+                    <div className="flex flex-col items-center justify-center gap-2 py-4">
+                      <Loader2 className="h-8 w-8 animate-spin text-[#5e1914]" />
+                      <p className="font-semibold text-zinc-800">Querying Live DHL & Carrier Rates...</p>
+                      <p className="text-xs text-zinc-500">Calculating real-time rates based on destination zone and chargeable weight.</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-sm text-zinc-500">Pricing is the last lookup. Click Get rates after sender, receiver, and parcel details are ready.</p>
+                      <button
+                        onClick={() => fetchLiveRates()}
+                        className="mt-4 inline-flex items-center gap-2 rounded-none bg-[#5e1914] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#4a130f]"
+                      >
+                        <RefreshCw className="h-4 w-4" /> Fetch Live Rates
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="mt-4 space-y-3">
-                  {adjustedRates.map((rate) => (
+                  {rates.map((rate) => (
                     <button
                       key={rate.id}
                       type="button"
@@ -322,18 +464,28 @@ export function AdminBookingFlow() {
                         setSelectedRateId(rate.id);
                         setDropoffOpen(true);
                       }}
-                      className={`w-full border bg-white p-4 text-left ${selectedRateId === rate.id ? "border-[#5e1914]" : "border-zinc-100"}`}
+                      className={`w-full border bg-white p-4 text-left transition-colors ${selectedRateId === rate.id ? "border-[#5e1914] shadow-sm" : "border-zinc-100 hover:border-zinc-300"}`}
                     >
                       <div className="flex items-center gap-4">
                         <span className="grid h-9 w-9 place-items-center bg-yellow-400 text-[10px] font-bold text-zinc-900">{rate.name.slice(0, 3).toUpperCase()}</span>
                         <div>
-                          <p className="font-semibold text-zinc-900">{rate.name} {rate.recommended ? <span className="ml-2 bg-emerald-500 px-2 py-1 text-xs text-white">Recommended</span> : null}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-zinc-900">{rate.name}</p>
+                            {rate.recommended ? <span className="bg-emerald-500 px-2 py-0.5 text-xs text-white">Recommended</span> : null}
+                            {(rate.isLive || (rate.id === "dhl" && isLiveDhl)) ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" /> Live DHL Quote
+                              </span>
+                            ) : null}
+                          </div>
                           <p className="text-sm text-zinc-500">{rate.service}</p>
                           <p className="mt-2 text-xs text-zinc-600">Pickup: {rate.pickup} · Delivery: {rate.delivery}</p>
                         </div>
                         <div className="ml-auto text-right">
                           <p className="text-xl font-bold text-zinc-900">{money(rate.amount)}</p>
-                          <span className="mt-2 inline-block border border-[#5e1914] px-4 py-2 text-sm font-semibold text-[#5e1914]">Select</span>
+                          <span className={`mt-2 inline-block px-4 py-2 text-sm font-semibold ${selectedRateId === rate.id ? "bg-[#5e1914] text-white" : "border border-[#5e1914] text-[#5e1914]"}`}>
+                            {selectedRateId === rate.id ? "Selected" : "Select"}
+                          </span>
                         </div>
                       </div>
                     </button>
@@ -411,7 +563,16 @@ export function AdminBookingFlow() {
           )}
         </main>
         {step === "review" ? (
-          <RightRail step={step} total={total} shipping={selectedRate.amount} addOns={insuranceFee} customs={customsCharge} service={serviceCharge} onPay={() => setConfirmed(true)} />
+          <RightRail
+            step={step}
+            total={total}
+            shipping={selectedRate.amount}
+            addOns={insuranceFee}
+            customs={customsCharge}
+            service={serviceCharge}
+            bookingPending={bookingPending}
+            onPay={handleBookShipment}
+          />
         ) : null}
       </div>
 
@@ -566,15 +727,62 @@ function AddressStep({
   );
 }
 
-function RightRail({ step, total, shipping, addOns, customs, service, onPay }: { step: Step; total: number; shipping: number; addOns: number; customs: number; service: number; onPay: () => void }) {
+function RightRail({
+  step,
+  total,
+  shipping,
+  addOns,
+  customs,
+  service,
+  bookingPending,
+  onPay,
+}: {
+  step: Step;
+  total: number;
+  shipping: number;
+  addOns: number;
+  customs: number;
+  service: number;
+  bookingPending?: boolean;
+  onPay: () => void;
+}) {
   if (step === "review") {
-    return <PaymentPanel title="Make Payment" total={total} shipping={shipping} addOns={addOns} customs={customs} service={service} onPay={onPay} />;
+    return (
+      <PaymentPanel
+        title="Make Payment"
+        total={total}
+        shipping={shipping}
+        addOns={addOns}
+        customs={customs}
+        service={service}
+        bookingPending={bookingPending}
+        onPay={onPay}
+      />
+    );
   }
 
   return null;
 }
 
-function PaymentPanel({ title, total, shipping, addOns, customs, service, onPay }: { title: string; total: number; shipping: number; addOns: number; customs: number; service: number; onPay?: () => void }) {
+function PaymentPanel({
+  title,
+  total,
+  shipping,
+  addOns,
+  customs,
+  service,
+  bookingPending,
+  onPay,
+}: {
+  title: string;
+  total: number;
+  shipping: number;
+  addOns: number;
+  customs: number;
+  service: number;
+  bookingPending?: boolean;
+  onPay?: () => void;
+}) {
   return (
     <aside className="bg-[#f7f1ef] px-8 py-10">
       <div className="sticky top-8 rounded-none bg-white p-8 shadow-sm">
@@ -592,7 +800,20 @@ function PaymentPanel({ title, total, shipping, addOns, customs, service, onPay 
           <p className="text-xs text-zinc-500">Wallet Balance</p>
           <p className="mt-3 text-2xl font-bold text-zinc-900">₦38,265.40 <span className="ml-2 bg-red-50 px-2 py-1 text-xs font-medium text-red-500">Low balance</span></p>
         </div>
-        <button onClick={onPay} className="mt-6 w-full rounded-none bg-[#5e1914] py-4 font-semibold text-white hover:bg-[#4a130f]">Make Payment</button>
+        <button
+          onClick={onPay}
+          disabled={bookingPending}
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-none bg-[#5e1914] py-4 font-semibold text-white hover:bg-[#4a130f] disabled:bg-zinc-400"
+        >
+          {bookingPending ? (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Booking with DMX & DHL...
+            </>
+          ) : (
+            "Make Payment & Book Shipment"
+          )}
+        </button>
       </div>
     </aside>
   );

@@ -24,10 +24,10 @@ export interface PricingState {
   manualRates: ManualRate[];
 }
 
-/** Demo API config — Connected to DML API */
+/** Live DMX Rate API config — Connected to DMX Logistics & DHL Rate Engine */
 export const INITIAL_API_CONFIG: ApiPricingConfig = {
   connected: true,
-  endpoint: "https://api.dml-logistics.ng/v1/rates",
+  endpoint: "https://backend.dmxlogistics.com.ng/shipments/rate",
   lastSync: STATIC_ISO,
 };
 
