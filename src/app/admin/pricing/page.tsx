@@ -53,6 +53,8 @@ export default function AdminPricingPage() {
     merchantsWithCustomPricing,
   } = useRateCard();
   const [rateMode, setRateMode] = useState<"global" | "custom">("global");
+  const [draftMarkup, setDraftMarkup] = useState<number>(markupPercent ?? 0);
+  const [markupAffirmed, setMarkupAffirmed] = useState<boolean>(false);
   const [selectedMerchantId, setSelectedMerchantId] = useState<string | null>(null);
   const [merchantSearch, setMerchantSearch] = useState("");
   const [customMoversDiscount, setCustomMoversDiscount] = useState<string>("");
@@ -312,25 +314,90 @@ export default function AdminPricingPage() {
                 Cost vs. Profit
               </h2>
               <p className="mt-1 text-sm text-zinc-500">
-                Profit Markup is applied to Carrier Cost from the rate sheet to generate Selling Price. Cost Price is stored on each Shipment for Admin auditing.
+                Profit Markup is applied to Carrier Cost from the rate sheet to generate Selling Price. Default is 0%.
               </p>
             </div>
-            <div className="flex items-center gap-6 p-8">
-              <div>
-                <label className="block text-xs font-medium uppercase tracking-wider text-zinc-500">Profit Markup %</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={1}
-                  defaultValue={20}
-                  id="profit-markup"
-                  className="mt-2 w-24 border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 focus:border-[#5e1914] focus:outline-none focus:ring-1 focus:ring-[#5e1914]"
-                />
+            <div className="p-8 space-y-6">
+              <div className="flex flex-wrap items-end gap-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                    Profit Markup %
+                  </label>
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.5}
+                      value={draftMarkup}
+                      onChange={(e) => {
+                        setDraftMarkup(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)));
+                        setMarkupAffirmed(false);
+                      }}
+                      id="profit-markup"
+                      className="w-28 border border-zinc-300 bg-white px-4 py-3 text-base font-bold text-zinc-900 focus:border-[#5e1914] focus:outline-none focus:ring-1 focus:ring-[#5e1914]"
+                    />
+                    <span className="text-base font-bold text-zinc-500">%</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMarkupPercent(draftMarkup);
+                    setMarkupAffirmed(true);
+                  }}
+                  className="inline-flex items-center gap-2 bg-[#5e1914] px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-[#4a130f]"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Affirm & Apply Markup</span>
+                </button>
               </div>
-              <p className="text-sm text-zinc-600">
-                Default 20%. Selling Price = Carrier Cost × (1 + Markup/100).
-              </p>
+
+              {/* Quick Preset Selector */}
+              <div>
+                <span className="text-xs font-medium text-zinc-500">Quick Presets:</span>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {[
+                    { label: "0% (Direct Carrier Cost)", value: 0 },
+                    { label: "5% Margin", value: 5 },
+                    { label: "10% Margin", value: 10 },
+                    { label: "15% Margin", value: 15 },
+                    { label: "20% Margin", value: 20 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      onClick={() => {
+                        setDraftMarkup(preset.value);
+                        setMarkupPercent(preset.value);
+                        setMarkupAffirmed(true);
+                      }}
+                      className={`border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        (markupPercent ?? 0) === preset.value
+                          ? "border-[#5e1914] bg-[#5e1914] text-white"
+                          : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-zinc-300"
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Affirmation Confirmation Box */}
+              {markupAffirmed ? (
+                <div className="flex items-center gap-3 border border-emerald-200 bg-emerald-50 p-4 text-xs font-semibold text-emerald-900">
+                  <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" />
+                  <span>
+                    ✓ Affirmed & Saved: Active markup set to {draftMarkup}%. Selling Price = Carrier Direct Cost × {1 + draftMarkup / 100}.
+                  </span>
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-500">
+                  Current policy: {(markupPercent ?? 0) === 0 ? "0% markup active. Selling price equals Carrier Direct Cost (100% pass-through)." : `Selling Price = Carrier Cost × (1 + ${markupPercent}/100).`}
+                </p>
+              )}
             </div>
           </div>
 
@@ -419,7 +486,7 @@ export default function AdminPricingPage() {
                   min={0}
                   max={100}
                   step={0.5}
-                  value={markupPercent ?? 20}
+                  value={markupPercent ?? 0}
                   onChange={(e) => setMarkupPercent(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
                   className="w-24 border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-[#5e1914] focus:outline-none focus:ring-1 focus:ring-[#5e1914]"
                 />

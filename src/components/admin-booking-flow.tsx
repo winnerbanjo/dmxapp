@@ -1429,25 +1429,35 @@ function PaymentPanel({
           <Line label="Customs Estimate" value={money(customs)} />
           <Line label="Service Charge" value={money(service)} />
         </div>
-        <Line label="Total" value={money(total)} className="mt-5 font-semibold" />
-        <div className="mt-8 rounded-none border border-zinc-100 p-5">
-          <p className="text-xs text-zinc-500">Wallet / Balance Status</p>
-          <p className="mt-3 text-2xl font-bold text-zinc-900">
-            ₦38,265.40 <span className="ml-2 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-600">Active</span>
-          </p>
+        <div className="mt-8 rounded-none border border-zinc-200 bg-zinc-50/70 p-4 space-y-3">
+          <div className="flex items-center justify-between text-xs text-zinc-600">
+            <span className="font-semibold uppercase tracking-wider text-zinc-500">Markup Policy</span>
+            <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5">
+              0% (Carrier Direct Cost)
+            </span>
+          </div>
+          <div className="border-t border-zinc-200 pt-3">
+            <div className="flex items-center gap-2 text-xs text-zinc-700">
+              <ShieldCheck className="h-4 w-4 text-[#5e1914] shrink-0" />
+              <span className="font-medium">
+                All angles reviewed: Addresses, HS tariff codes, and DHL live carrier charges.
+              </span>
+            </div>
+          </div>
         </div>
+
         <button
           onClick={onPay}
           disabled={bookingPending}
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-none bg-[#5e1914] py-4 font-semibold text-white hover:bg-[#4a130f] disabled:bg-zinc-400"
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-none bg-[#5e1914] py-4 font-semibold text-white hover:bg-[#4a130f] disabled:bg-zinc-400 transition-all shadow-sm"
         >
           {bookingPending ? (
             <>
               <Loader2 className="h-5 w-5 animate-spin" />
-              Booking with DMX & DHL...
+              Affirming & Booking Shipment...
             </>
           ) : (
-            "Make Payment & Book Shipment"
+            "Affirm & Book Shipment"
           )}
         </button>
       </div>

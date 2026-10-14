@@ -96,8 +96,8 @@ export const DEMO_ZONE_RATES: ZoneRateRow[] = [
   { weightKg: 20, zone1: 135500, zone2: 70100, zone3: 160700, zone4: 144900 },
 ];
 
-/** Profit markup (default 20%). Admin-configurable. */
-export const DEFAULT_PROFIT_MARKUP_PERCENT = 20;
+/** Profit markup (default 0%). Admin-configurable. */
+export const DEFAULT_PROFIT_MARKUP_PERCENT = 0;
 
 /** Get zone ID from country name (Smart Zone Search). */
 export function getZoneFromCountry(country: string): ZoneId | null {

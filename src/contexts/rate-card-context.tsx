@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export interface RateCardRow {
   origin: string;
@@ -76,15 +76,33 @@ function findRate(rates: RateCardRow[], origin: string, destination: string): Ra
   );
 }
 
-const DEFAULT_MARKUP_PERCENT = 20;
+const DEFAULT_MARKUP_PERCENT = 0;
 
 export function RateCardProvider({ children }: { children: React.ReactNode }) {
   const [economyRates, setEconomyRates] = useState<RateCardRow[]>([]);
   const [expressRates, setExpressRates] = useState<RateCardRow[]>([]);
   const [internationalRates, setInternationalRates] = useState<InternationalRateRow[]>([]);
   const [moversRates, setMoversRates] = useState<MoversRateRow[]>([]);
-  const [markupPercent, setMarkupPercent] = useState<number>(DEFAULT_MARKUP_PERCENT);
+  const [markupPercent, setMarkupPercentState] = useState<number>(0);
   const [customRatesByMerchant, setCustomRatesByMerchantState] = useState<Record<string, CustomMerchantRates>>({});
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("dmx_profit_markup");
+      if (saved !== null) {
+        const val = parseFloat(saved);
+        if (!isNaN(val)) setMarkupPercentState(val);
+      }
+    } catch {}
+  }, []);
+
+  const setMarkupPercent = useCallback((val: number) => {
+    const num = Math.max(0, Math.min(100, Number(val) || 0));
+    setMarkupPercentState(num);
+    try {
+      localStorage.setItem("dmx_profit_markup", num.toString());
+    } catch {}
+  }, []);
 
   const setCustomRatesForMerchant = useCallback((merchantId: string, data: CustomMerchantRates) => {
     setCustomRatesByMerchantState((prev) => ({ ...prev, [merchantId]: data }));
@@ -161,7 +179,7 @@ export function RateCardProvider({ children }: { children: React.ReactNode }) {
       getMoversRatesForMerchant,
       merchantsWithCustomPricing,
     }),
-    [economyRates, expressRates, internationalRates, moversRates, markupPercent, customRatesByMerchant, setCustomRatesForMerchant, getQuote, getMoversDiscountPercent, getMoversRatesForMerchant, merchantsWithCustomPricing]
+    [economyRates, expressRates, internationalRates, moversRates, markupPercent, setMarkupPercent, customRatesByMerchant, setCustomRatesForMerchant, getQuote, getMoversDiscountPercent, getMoversRatesForMerchant, merchantsWithCustomPricing]
   );
 
   return <RateCardContext.Provider value={value}>{children}</RateCardContext.Provider>;

@@ -28,7 +28,7 @@ export default async function MerchantDashboardPage({
   const totalShipments = overview?.counts?.shipments ?? 21599;
   const totalDelivered = overview?.shipmentsByStatus?.find((s) => s.status === "DELIVERED")?.count ?? 16355;
   const inTransit = overview?.shipmentsByStatus?.find((s) => s.status === "TRANSIT")?.count ?? 426;
-  const walletBalance = 38265.4;
+  const walletBalance = 0.0;
 
   const rawRecent = recentShipmentsData?.shipments || [];
   const recentActivity = rawRecent.map((s) => ({
