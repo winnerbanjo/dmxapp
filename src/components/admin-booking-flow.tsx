@@ -111,14 +111,7 @@ const emptyReceiver: Address = {
 };
 
 const baseRates: Rate[] = [
-  { id: "ups", name: "United Parcel Services", service: "Express Saver", pickup: "Within 3 business days", delivery: "Within 5 business days", amount: 181666.33, tags: ["Pickup"] },
-  { id: "ship-naija", name: "Ship to Naija", service: "Express Shipping", pickup: "Drop-off only", delivery: "Within 2 business days", amount: 184778.12, tags: ["Dropoff"] },
   { id: "dhl", name: "DHL Express", service: "Express Worldwide", pickup: "Within 1 business day", delivery: "Within 2 business days", amount: 236874.94, tags: ["Pickup", "Dropoff"], recommended: true },
-  { id: "fedex-priority", name: "FedEx", service: "International Priority", pickup: "Within 3 business days", delivery: "Within 4 business days", amount: 197863.7, tags: ["Pickup", "Dropoff"] },
-  { id: "fedex-economy", name: "FedEx", service: "International Economy", pickup: "Within 3 business days", delivery: "Within 4 business days", amount: 186022.61, tags: ["Pickup"] },
-  { id: "dmx-express", name: "DMX Express", service: "Express Shipping", pickup: "Within 1 business day", delivery: "Within 2 business days", amount: 187320.94, tags: ["Pickup"] },
-  { id: "aramax", name: "Aramex", service: "Standard", pickup: "Within 2 business days", delivery: "Within 2 business days", amount: 169285.53, tags: ["Dropoff"] },
-  { id: "parcel", name: "Parcels Express", service: "Express Delivery via DPD", pickup: "Drop-off only", delivery: "Within 5 business days", amount: 150000, tags: ["Dropoff"] },
 ];
 
 const branches = [
@@ -573,7 +566,7 @@ export function AdminBookingFlow() {
           )}
           {step === "carrier" && (
             <section>
-              <PageTitle title="Select Carrier" subtitle="Real-time DHL and international carrier rates." />
+              <PageTitle title="Select Carrier" subtitle="Real-time live DHL Express rates." />
               <div className="mt-6 grid gap-3 border border-zinc-100 bg-[#f7f1ef] p-5 sm:grid-cols-4">
                 <Metric label="Actual weight" value={`${actualWeight.toFixed(2)} kg`} />
                 <Metric label="Volumetric weight" value={`${volumetricWeight.toFixed(2)} kg`} />
@@ -581,9 +574,11 @@ export function AdminBookingFlow() {
                 <Metric label="Declared value" value={money(parcelValue)} />
               </div>
               <div className="mt-6 flex items-center justify-between bg-[#f6f1ea] p-3">
-                <div className="flex gap-2">
-                  <button className="rounded-none bg-zinc-900 px-4 py-2 text-sm text-white">DMX Network</button>
-                  <button className="rounded-none bg-white px-4 py-2 text-sm text-zinc-700">Live Accounts</button>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Connected Carrier: DHL Express
+                  </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <button

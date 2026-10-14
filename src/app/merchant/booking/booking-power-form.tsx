@@ -72,7 +72,7 @@ export function BookingPowerForm({
   const [idPassportNumber, setIdPassportNumber] = useState("");
   const [packageCategory, setPackageCategory] = useState("");
   const [receiverCountry, setReceiverCountry] = useState(initialValues?.receiverCountry ?? "");
-  const [selectedCourierId, setSelectedCourierId] = useState("dmx");
+  const [selectedCourierId, setSelectedCourierId] = useState("dhl");
 
   const isInternational = serviceType === "international";
 
@@ -113,37 +113,13 @@ export function BookingPowerForm({
 
     return [
       {
-        id: "dmx",
-        name: "DMX Express",
-        service: express ? "Priority Network" : "Standard Network",
-        eta: express ? "1-2 business days" : "2-4 business days",
-        pickup: "Pickup or hub drop-off",
-        amount: base,
-        recommended: true,
-      },
-      {
         id: "dhl",
         name: "DHL Express",
-        service: "Express Worldwide",
+        service: isInternational ? "Express Worldwide" : "Express Domestic",
         eta: isInternational ? "2-5 business days" : "1-3 business days",
         pickup: "Pickup available",
         amount: Math.round(base * 1.18 + 1200),
-      },
-      {
-        id: "fedex",
-        name: "FedEx",
-        service: express ? "International Priority" : "International Economy",
-        eta: isInternational ? "3-6 business days" : "2-5 business days",
-        pickup: "Pickup available",
-        amount: Math.round(base * 1.08 + 1800),
-      },
-      {
-        id: "ups",
-        name: "UPS",
-        service: "Saver",
-        eta: isInternational ? "4-7 business days" : "3-5 business days",
-        pickup: "Drop-off preferred",
-        amount: Math.round(base * 0.98 + 900),
+        recommended: true,
       },
     ];
   }, [baseFare, express, isInternational]);

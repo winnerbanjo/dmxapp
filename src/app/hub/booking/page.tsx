@@ -41,8 +41,8 @@ export default function HubBookingPage() {
   const [hsCode, setHsCode] = useState("");
   const [idPassportNumber, setIdPassportNumber] = useState("");
   const [packageCategory, setPackageCategory] = useState("");
-  const [fulfillmentPartnerId, setFulfillmentPartnerId] = useState<string>("dmx-internal");
-  const [selectedCourierId, setSelectedCourierId] = useState("dmx");
+  const [fulfillmentPartnerId, setFulfillmentPartnerId] = useState<string>("dhl");
+  const [selectedCourierId, setSelectedCourierId] = useState("dhl");
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
@@ -82,37 +82,13 @@ export default function HubBookingPage() {
 
     return [
       {
-        id: "dmx",
-        name: "DMX Express",
-        service: "Managed Network",
-        eta: serviceType === "international" ? "3-7 business days" : "1-3 business days",
-        pickup: "Hub intake or pickup",
-        amount: base,
-        recommended: true,
-      },
-      {
         id: "dhl",
         name: "DHL Express",
         service: "Express Worldwide",
         eta: serviceType === "international" ? "2-5 business days" : "1-3 business days",
         pickup: "Pickup available",
         amount: Math.round(base * 1.22 + 1500),
-      },
-      {
-        id: "fedex",
-        name: "FedEx",
-        service: "Priority",
-        eta: serviceType === "international" ? "3-6 business days" : "2-4 business days",
-        pickup: "Pickup available",
-        amount: Math.round(base * 1.12 + 1800),
-      },
-      {
-        id: "ups",
-        name: "UPS",
-        service: "Saver",
-        eta: serviceType === "international" ? "4-7 business days" : "2-5 business days",
-        pickup: "Drop-off preferred",
-        amount: Math.round(base * 1.02 + 900),
+        recommended: true,
       },
     ];
   }, [customsValue, serviceType, weightNum]);
@@ -345,7 +321,7 @@ export default function HubBookingPage() {
             ))}
           </select>
           <p className="mt-1 text-xs text-zinc-500">
-            Select who will handle this shipment. External partners (DHL, GIG, FedEx) will show a &quot;Track via Partner&quot; link on the waybill.
+            Select who will handle this shipment. External partners (DHL Express) will show a &quot;Track via Partner&quot; link on the waybill.
           </p>
         </section>
 

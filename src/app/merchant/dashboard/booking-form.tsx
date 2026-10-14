@@ -55,7 +55,7 @@ export function BookingForm() {
   const [premiumInsurance, setPremiumInsurance] = useState(false);
   const [fragile, setFragile] = useState(false);
   const [signatureRequired, setSignatureRequired] = useState(false);
-  const [selectedCourierId, setSelectedCourierId] = useState("dmx");
+  const [selectedCourierId, setSelectedCourierId] = useState("dhl");
 
   const weightNum = Math.max(0, parseFloat(packageWeight) || 0);
   const declaredNum = Math.max(0, parseFloat(declaredValue) || 0);
@@ -72,10 +72,7 @@ export function BookingForm() {
   const courierRates: CourierRate[] = useMemo(() => {
     const courierBase = Math.max(0, breakdown.baseShipping + breakdown.fuelSurcharge);
     return [
-      { id: "dmx", name: "DMX Express", service: "Managed Network", eta: "1-3 business days", amount: courierBase, recommended: true },
-      { id: "dhl", name: "DHL Express", service: "Express Worldwide", eta: "1-3 business days", amount: Math.round(courierBase * 1.22 + 1000) },
-      { id: "fedex", name: "FedEx", service: "Priority", eta: "2-4 business days", amount: Math.round(courierBase * 1.12 + 1200) },
-      { id: "ups", name: "UPS", service: "Saver", eta: "3-5 business days", amount: Math.round(courierBase * 1.02 + 700) },
+      { id: "dhl", name: "DHL Express", service: "Express Worldwide", eta: "1-3 business days", amount: Math.round(courierBase * 1.22 + 1000), recommended: true },
     ];
   }, [breakdown.baseShipping, breakdown.fuelSurcharge]);
   const selectedCourier = courierRates.find((rate) => rate.id === selectedCourierId) ?? courierRates[0];

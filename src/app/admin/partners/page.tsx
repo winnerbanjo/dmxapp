@@ -97,7 +97,7 @@ export default function AdminPartnersPage() {
               Partner Management
             </h1>
             <p className="mt-1 text-sm text-zinc-500">
-              Manage 3PL partners: DHL, GIG, FedEx, or Internal Fleet.
+              Manage connected 3PL carrier partners and DHL Express integration.
             </p>
           </div>
         </div>
