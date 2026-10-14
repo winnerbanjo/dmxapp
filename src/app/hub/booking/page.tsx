@@ -9,6 +9,17 @@ import { ServiceTypeSelector } from "@/components/service-type-selector";
 import { DEMO_PARTNERS } from "@/data/partners-demo";
 import { StructuredAddressField } from "@/components/structured-address-field";
 import { emptyStructuredAddress, formatStructuredAddress, type StructuredAddressValue } from "@/types/address";
+import {
+  COUNTRY_PHONE_PREFIXES,
+  getPrefixForCountry,
+  splitPhoneNumber,
+  formatFullPhone,
+} from "@/lib/phone-prefix";
+import {
+  POPULAR_HS_CATEGORIES,
+  HS_DATABASE,
+  detectHsCode,
+} from "@/lib/hs-codes";
 
 const PACKAGE_CATEGORY_OPTIONS = [
   { value: "personal", label: "Personal" },
@@ -31,6 +42,8 @@ export default function HubBookingPage() {
   const [fromTask, setFromTask] = useState(false);
 
   const [name, setName] = useState("");
+  const [phonePrefix, setPhonePrefix] = useState("+234");
+  const [phoneLocal, setPhoneLocal] = useState("");
   const [phone, setPhone] = useState("");
   const [pickupStructured, setPickupStructured] = useState<StructuredAddressValue>(emptyStructuredAddress());
   const [deliveryStructured, setDeliveryStructured] = useState<StructuredAddressValue>(emptyStructuredAddress());
@@ -198,16 +211,37 @@ export default function HubBookingPage() {
               />
             </div>
             <div>
-              <label htmlFor="phone" className="block text-xs font-medium uppercase tracking-wider text-zinc-500">Phone</label>
-              <input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+234 ..."
-                className="mt-2 w-full rounded-none border border-zinc-200 bg-white px-4 py-3 font-sans text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-[#5e1914] focus:outline-none focus:ring-1 focus:ring-[#5e1914]"
-                required
-              />
+              <label htmlFor="phone" className="block text-xs font-medium uppercase tracking-wider text-zinc-500">Phone *</label>
+              <div className="mt-2 flex border border-zinc-200 bg-white focus-within:border-[#5e1914] focus-within:ring-1 focus-within:ring-[#5e1914]">
+                <select
+                  value={phonePrefix}
+                  onChange={(e) => {
+                    const newP = e.target.value;
+                    setPhonePrefix(newP);
+                    setPhone(formatFullPhone(newP, phoneLocal));
+                  }}
+                  className="max-w-[120px] border-r border-zinc-200 bg-zinc-50 px-2 text-xs font-semibold text-zinc-800 outline-none hover:bg-zinc-100"
+                >
+                  {COUNTRY_PHONE_PREFIXES.map((item) => (
+                    <option key={`${item.country}-${item.prefix}`} value={item.prefix}>
+                      {item.code ? `${item.code} (${item.prefix})` : `${item.prefix} ${item.country}`}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  id="phone"
+                  type="tel"
+                  value={phoneLocal}
+                  onChange={(e) => {
+                    const clean = e.target.value.replace(/[^\d\s-]/g, "").replace(/^0+/, "");
+                    setPhoneLocal(clean);
+                    setPhone(formatFullPhone(phonePrefix, clean));
+                  }}
+                  placeholder="800 000 0000"
+                  className="w-full px-4 py-3 font-sans text-sm text-zinc-900 placeholder:text-zinc-400 outline-none"
+                  required
+                />
+              </div>
             </div>
           </div>
         </section>
@@ -253,9 +287,36 @@ export default function HubBookingPage() {
         </section>
 
         {isInternational && (
-          <section>
-            <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500">International (Customs)</h2>
-            <div className="mt-4 grid gap-6 sm:grid-cols-2">
+          <section className="space-y-6">
+            <div>
+              <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500">International (Customs Declaration)</h2>
+              <p className="mt-1 text-xs text-zinc-500">Select commodity type to auto-generate HS Tariff codes for DHL clearance.</p>
+              
+              <div className="mt-3">
+                <span className="block text-xs font-semibold text-zinc-600 mb-1.5">
+                  Quick Select Commodity (Auto-sets HS Code):
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {POPULAR_HS_CATEGORIES.map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setHsCode(cat.code)}
+                      className={`inline-flex items-center gap-1 border px-2.5 py-1 text-xs font-medium transition-colors ${
+                        hsCode === cat.code
+                          ? "border-[#5e1914] bg-[#5e1914] text-white"
+                          : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-[#5e1914] hover:bg-zinc-100"
+                      }`}
+                    >
+                      <span>{cat.icon}</span>
+                      <span>{cat.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-6 sm:grid-cols-2">
               <div>
                 <label htmlFor="itemValueCustoms" className="block text-xs font-medium uppercase tracking-wider text-zinc-500">Item Value for Customs (₦)</label>
                 <input
@@ -268,15 +329,38 @@ export default function HubBookingPage() {
                 />
               </div>
               <div>
-                <label htmlFor="hsCode" className="block text-xs font-medium uppercase tracking-wider text-zinc-500">HS Code (optional)</label>
-                <input
-                  id="hsCode"
-                  type="text"
-                  value={hsCode}
-                  onChange={(e) => setHsCode(e.target.value)}
-                  placeholder="e.g. 8471.30"
-                  className="mt-2 w-full rounded-none border border-zinc-200 bg-white px-4 py-3 font-sans text-sm text-zinc-900 focus:border-[#5e1914] focus:outline-none focus:ring-1 focus:ring-[#5e1914]"
-                />
+                <label htmlFor="hsCode" className="block text-xs font-medium uppercase tracking-wider text-zinc-500">HS Code (Customs Tariff) *</label>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    id="hsCode"
+                    type="text"
+                    value={hsCode}
+                    onChange={(e) => setHsCode(e.target.value)}
+                    placeholder="e.g. 6204.42 (Clothes)"
+                    className="w-full rounded-none border border-zinc-200 bg-white px-4 py-3 font-mono text-sm text-zinc-900 focus:border-[#5e1914] focus:outline-none focus:ring-1 focus:ring-[#5e1914]"
+                  />
+                  <select
+                    value={hsCode}
+                    onChange={(e) => setHsCode(e.target.value)}
+                    className="border border-zinc-200 bg-zinc-50 px-3 text-xs font-semibold text-zinc-800 outline-none"
+                  >
+                    <option value="">-- Standard HS Code --</option>
+                    {HS_DATABASE.map((item) => (
+                      <option key={item.code} value={item.code}>
+                        {item.code} — {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {(() => {
+                  const detected = HS_DATABASE.find((h) => h.code === hsCode);
+                  if (!detected && !hsCode) return null;
+                  return (
+                    <p className="mt-1 text-xs font-medium text-emerald-800">
+                      ✨ {detected?.name || "Commodity"} ({detected?.description || "Harmonized customs classification"})
+                    </p>
+                  );
+                })()}
               </div>
               <div>
                 <label htmlFor="idPassportNumber" className="block text-xs font-medium uppercase tracking-wider text-zinc-500">ID / Passport Number</label>

@@ -21,6 +21,17 @@ import {
 import { BookingSlipModal } from "@/components/booking-slip-modal";
 import { StructuredAddressField } from "@/components/structured-address-field";
 import { emptyStructuredAddress, type StructuredAddressValue } from "@/types/address";
+import {
+  COUNTRY_PHONE_PREFIXES,
+  getPrefixForCountry,
+  splitPhoneNumber,
+  formatFullPhone,
+} from "@/lib/phone-prefix";
+import {
+  POPULAR_HS_CATEGORIES,
+  HS_DATABASE,
+  detectHsCode,
+} from "@/lib/hs-codes";
 
 const ITEM_CATEGORIES = ["Documents", "Electronics", "Fashion", "Food & Beverage", "General Merchandise", "Other"] as const;
 const PACKAGE_CATEGORY_OPTIONS = [
@@ -60,6 +71,9 @@ export function BookingPowerForm({
   onBack: () => void;
 }) {
   const [receiverName, setReceiverName] = useState(initialValues?.receiverName ?? "");
+  const initialPhone = splitPhoneNumber(initialValues?.receiverPhone ?? "", initialValues?.receiverCountry);
+  const [phonePrefix, setPhonePrefix] = useState(initialPhone.prefix);
+  const [phoneLocal, setPhoneLocal] = useState(initialPhone.localNumber);
   const [receiverPhone, setReceiverPhone] = useState(initialValues?.receiverPhone ?? "");
   const [receiverStructured, setReceiverStructured] = useState<StructuredAddressValue>(emptyStructuredAddress());
   const [assignedHub, setAssignedHub] = useState(DESTINATION_HUB_OPTIONS[0].value);
@@ -75,6 +89,16 @@ export function BookingPowerForm({
   const [selectedCourierId, setSelectedCourierId] = useState("dhl");
 
   const isInternational = serviceType === "international";
+
+  useEffect(() => {
+    if (receiverCountry) {
+      const p = getPrefixForCountry(receiverCountry);
+      setPhonePrefix(p);
+      if (phoneLocal) {
+        setReceiverPhone(formatFullPhone(p, phoneLocal));
+      }
+    }
+  }, [receiverCountry]);
 
   function handleReceiverHubSuggest(hub: string | null) {
     if (hub && DESTINATION_HUB_OPTIONS.some((o) => o.value === hub)) setAssignedHub(hub);
@@ -231,17 +255,38 @@ export function BookingPowerForm({
                     />
                   </div>
                   <div>
-                    <Label htmlFor="receiverPhone" className="text-zinc-700">Phone</Label>
-                    <Input
-                      id="receiverPhone"
-                      name="receiverPhone"
-                      type="tel"
-                      value={receiverPhone}
-                      onChange={(e) => setReceiverPhone(e.target.value)}
-                      className="mt-2 h-12 rounded-none border-zinc-100"
-                      placeholder="+234 800 000 0000"
-                      required
-                    />
+                    <Label htmlFor="receiverPhone" className="text-zinc-700">Phone *</Label>
+                    <div className="mt-2 flex border border-zinc-200 bg-white focus-within:border-[#5e1914] focus-within:ring-1 focus-within:ring-[#5e1914]">
+                      <select
+                        value={phonePrefix}
+                        onChange={(e) => {
+                          const newP = e.target.value;
+                          setPhonePrefix(newP);
+                          setReceiverPhone(formatFullPhone(newP, phoneLocal));
+                        }}
+                        className="max-w-[120px] border-r border-zinc-200 bg-zinc-50 px-2 text-xs font-semibold text-zinc-800 outline-none hover:bg-zinc-100"
+                      >
+                        {COUNTRY_PHONE_PREFIXES.map((item) => (
+                          <option key={`${item.country}-${item.prefix}`} value={item.prefix}>
+                            {item.code ? `${item.code} (${item.prefix})` : `${item.prefix} ${item.country}`}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        id="receiverPhone"
+                        type="tel"
+                        value={phoneLocal}
+                        onChange={(e) => {
+                          const clean = e.target.value.replace(/[^\d\s-]/g, "").replace(/^0+/, "");
+                          setPhoneLocal(clean);
+                          setReceiverPhone(formatFullPhone(phonePrefix, clean));
+                        }}
+                        className="h-12 w-full px-4 text-sm outline-none"
+                        placeholder="800 000 0000"
+                        required
+                      />
+                      <input type="hidden" name="receiverPhone" value={receiverPhone} />
+                    </div>
                   </div>
                 </div>
                 <StructuredAddressField
@@ -307,7 +352,12 @@ export function BookingPowerForm({
                     id="itemCategory"
                     name="itemCategory"
                     value={itemCategory}
-                    onChange={(e) => setItemCategory(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setItemCategory(val);
+                      const detected = detectHsCode(val);
+                      if (detected) setHsCode(detected.code);
+                    }}
                     className="mt-2 flex h-12 w-full rounded-none border border-zinc-100 bg-white px-4 text-zinc-900"
                   >
                     <option value="">Select</option>
@@ -332,47 +382,98 @@ export function BookingPowerForm({
               </div>
 
               {isInternational && (
-                <div className="mt-8 grid gap-6 sm:grid-cols-2">
+                <div className="mt-8 space-y-6">
+                  {/* Quick Commodity Selection */}
                   <div>
-                    <Label htmlFor="receiverCountry" className="text-zinc-700">Destination country</Label>
-                    <Input
-                      id="receiverCountry"
-                      name="receiverCountry"
-                      value={receiverCountry}
-                      onChange={(e) => setReceiverCountry(e.target.value)}
-                      placeholder="e.g. Cameroon, UK, USA"
-                      className="mt-2 h-12 rounded-none border-zinc-100"
-                    />
-                    {zone && (
-                      <p className="mt-1 text-xs font-medium text-[#5e1914]">
-                        Zone detected: {ZONE_LABELS[zone]} — rate pulled from sheet
-                      </p>
-                    )}
+                    <Label className="text-xs uppercase tracking-wider text-zinc-500">
+                      Quick Select Commodity (Auto-generates HS Tariff Code)
+                    </Label>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {POPULAR_HS_CATEGORIES.map((cat) => (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => {
+                            setItemCategory(cat.name);
+                            setHsCode(cat.code);
+                          }}
+                          className={`inline-flex items-center gap-1 border px-2.5 py-1 text-xs font-medium transition-colors ${
+                            hsCode === cat.code
+                              ? "border-[#5e1914] bg-[#5e1914] text-white"
+                              : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-[#5e1914] hover:bg-zinc-100"
+                          }`}
+                        >
+                          <span>{cat.icon}</span>
+                          <span>{cat.name}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="itemValueCustoms" className="text-zinc-700">Item Value for Customs (₦)</Label>
-                    <Input
-                      id="itemValueCustoms"
-                      name="itemValueCustoms"
-                      type="number"
-                      min="0"
-                      value={itemValueCustoms}
-                      onChange={(e) => setItemValueCustoms(e.target.value)}
-                      className="mt-2 h-12 rounded-none border-zinc-100"
-                      placeholder="Required for international"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="hsCode" className="text-zinc-700">HS Code (optional)</Label>
-                    <Input
-                      id="hsCode"
-                      name="hsCode"
-                      value={hsCode}
-                      onChange={(e) => setHsCode(e.target.value)}
-                      className="mt-2 h-12 rounded-none border-zinc-100"
-                      placeholder="e.g. 8471.30"
-                    />
-                  </div>
+
+                  <div className="grid gap-6 sm:grid-cols-2">
+                    <div>
+                      <Label htmlFor="receiverCountry" className="text-zinc-700">Destination country</Label>
+                      <Input
+                        id="receiverCountry"
+                        name="receiverCountry"
+                        value={receiverCountry}
+                        onChange={(e) => setReceiverCountry(e.target.value)}
+                        placeholder="e.g. Cameroon, UK, USA"
+                        className="mt-2 h-12 rounded-none border-zinc-100"
+                      />
+                      {zone && (
+                        <p className="mt-1 text-xs font-medium text-[#5e1914]">
+                          Zone detected: {ZONE_LABELS[zone]} — rate pulled from sheet
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="itemValueCustoms" className="text-zinc-700">Item Value for Customs (₦)</Label>
+                      <Input
+                        id="itemValueCustoms"
+                        name="itemValueCustoms"
+                        type="number"
+                        min="0"
+                        value={itemValueCustoms}
+                        onChange={(e) => setItemValueCustoms(e.target.value)}
+                        className="mt-2 h-12 rounded-none border-zinc-100"
+                        placeholder="Required for international"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="hsCode" className="text-zinc-700">HS Code (Customs Tariff) *</Label>
+                      <div className="mt-2 flex gap-2">
+                        <Input
+                          id="hsCode"
+                          name="hsCode"
+                          value={hsCode}
+                          onChange={(e) => setHsCode(e.target.value)}
+                          className="h-12 rounded-none border-zinc-100 font-mono"
+                          placeholder="e.g. 6204.42"
+                        />
+                        <select
+                          value={hsCode}
+                          onChange={(e) => setHsCode(e.target.value)}
+                          className="h-12 border border-zinc-100 bg-zinc-50 px-3 text-xs font-semibold text-zinc-800 outline-none"
+                        >
+                          <option value="">-- Standard HS Code --</option>
+                          {HS_DATABASE.map((item) => (
+                            <option key={item.code} value={item.code}>
+                              {item.code} — {item.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {(() => {
+                        const detected = HS_DATABASE.find((h) => h.code === hsCode) || detectHsCode(itemCategory);
+                        if (!detected && !hsCode) return null;
+                        return (
+                          <p className="mt-1 text-xs font-medium text-emerald-800">
+                            ✨ {detected?.name || "Apparel & Textiles"} ({detected?.description || "Harmonized customs classification"})
+                          </p>
+                        );
+                      })()}
+                    </div>
                   <div>
                     <Label htmlFor="idPassportNumber" className="text-zinc-700">ID / Passport Number</Label>
                     <Input
@@ -400,7 +501,8 @@ export function BookingPowerForm({
                     </select>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
             </section>
 
             {/* Service level */}

@@ -20,6 +20,18 @@ import {
   X,
 } from "lucide-react";
 import allCountriesData from "@/data/countries.json";
+import {
+  COUNTRY_PHONE_PREFIXES,
+  getPrefixForCountry,
+  splitPhoneNumber,
+  formatFullPhone,
+} from "@/lib/phone-prefix";
+import {
+  POPULAR_HS_CATEGORIES,
+  HS_DATABASE,
+  detectHsCode,
+  searchHsCodes,
+} from "@/lib/hs-codes";
 
 export interface CountryItem {
   _id: string;
@@ -322,10 +334,12 @@ export function AdminBookingFlow() {
 
   function saveItem() {
     if (!itemDraft.name.trim()) {
-      alert("Please enter an item name.");
+      alert("Please enter an item name or description.");
       return;
     }
-    setItems((prev) => [...prev, itemDraft]);
+    const detected = detectHsCode(itemDraft.name);
+    const resolvedHsCode = itemDraft.hsCode.trim() || detected?.code || "6204.42";
+    setItems((prev) => [...prev, { ...itemDraft, hsCode: resolvedHsCode }]);
     setItemDraft({
       name: "",
       hsCode: "",
@@ -418,7 +432,7 @@ export function AdminBookingFlow() {
               {items.map((item, index) => (
                 <p key={index} className="mt-3 text-sm text-zinc-600">
                   <span className="font-semibold text-[#5e1914]">ITEM {index + 1}</span><br />
-                  {item.name}, {item.quantity} piece(s), {item.weight}kg, {money(item.value)}, Origin: {item.origin}
+                  {item.name} {item.hsCode ? `· HS Code: ${item.hsCode}` : ""}, {item.quantity} piece(s), {item.weight}kg, {money(item.value)}, Origin: {item.origin}
                 </p>
               ))}
             </section>
@@ -526,7 +540,14 @@ export function AdminBookingFlow() {
                     items.map((item, idx) => (
                       <div key={idx} className="flex items-center justify-between border-b border-zinc-50 px-4 py-4">
                         <div>
-                          <p className="font-medium text-zinc-900">{item.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-zinc-900">{item.name}</p>
+                            {item.hsCode ? (
+                              <span className="inline-flex items-center rounded border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-mono font-semibold text-[#5e1914]">
+                                HS {item.hsCode}
+                              </span>
+                            ) : null}
+                          </div>
                           <p className="mt-1 text-sm text-zinc-500">
                             {item.quantity} pcs · {item.weight} kg · {money(item.value)} · Origin: {item.origin}
                           </p>
@@ -729,25 +750,120 @@ export function AdminBookingFlow() {
 
       {showItemModal && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-          <div className="w-full max-w-lg bg-white shadow-2xl">
+          <div className="w-full max-w-xl bg-white shadow-2xl">
             <div className="flex items-start justify-between border-b border-zinc-100 p-6">
               <div>
                 <h2 className="text-xl font-semibold text-zinc-900">Add Item to Package</h2>
-                <p className="mt-1 text-sm text-zinc-500">Accurate item details ensure smooth customs clearance.</p>
+                <p className="mt-1 text-sm text-zinc-500">
+                  Harmonized Tariff (HS) codes are automatically generated as you type items.
+                </p>
               </div>
               <button onClick={() => setShowItemModal(false)}><X className="h-5 w-5" /></button>
             </div>
-            <div className="space-y-4 p-6">
+            <div className="max-h-[75vh] overflow-y-auto space-y-4 p-6">
+              {/* Quick Category Suggestions */}
+              <div>
+                <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-600">
+                  Quick Select Commodity (Auto-generates HS code):
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {POPULAR_HS_CATEGORIES.map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        setItemDraft((draft) => ({
+                          ...draft,
+                          name: draft.name.trim() ? draft.name : cat.name,
+                          hsCode: cat.code,
+                        }));
+                      }}
+                      className={`inline-flex items-center gap-1 border px-2.5 py-1 text-xs font-medium transition-colors ${
+                        itemDraft.hsCode === cat.code
+                          ? "border-[#5e1914] bg-[#5e1914] text-white"
+                          : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-[#5e1914] hover:bg-zinc-100"
+                      }`}
+                    >
+                      <span>{cat.icon}</span>
+                      <span>{cat.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <TextField
                 label="Item name / Description *"
                 value={itemDraft.name}
-                onChange={(value) => setItemDraft((item) => ({ ...item, name: value }))}
+                onChange={(value) => {
+                  const detected = detectHsCode(value);
+                  setItemDraft((item) => ({
+                    ...item,
+                    name: value,
+                    hsCode: detected ? detected.code : item.hsCode,
+                  }));
+                }}
               />
-              <TextField
-                label="HS Tariff Code (Optional)"
-                value={itemDraft.hsCode}
-                onChange={(value) => setItemDraft((item) => ({ ...item, hsCode: value }))}
-              />
+
+              {/* Detected Classification Banner */}
+              {(() => {
+                const detected = detectHsCode(itemDraft.name) || HS_DATABASE.find((h) => h.code === itemDraft.hsCode);
+                if (!detected && !itemDraft.hsCode) return null;
+                return (
+                  <div className="border border-emerald-200 bg-emerald-50/80 p-3 text-xs text-emerald-900">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-emerald-950">
+                        ✨ Auto-Detected HS Code: <span className="font-mono text-base font-bold text-[#5e1914]">{itemDraft.hsCode || detected?.code}</span>
+                      </span>
+                      <span className="rounded bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800">
+                        {detected?.category || "Apparel & Textiles"}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-emerald-800">
+                      {detected?.description || "Harmonized System classification for international customs declaration."}
+                    </p>
+                  </div>
+                );
+              })()}
+
+              <div>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-zinc-700">
+                    HS Tariff Code (Auto-populated or select below) *
+                  </span>
+                  <div className="flex gap-2">
+                    <input
+                      value={itemDraft.hsCode}
+                      onChange={(e) => setItemDraft((item) => ({ ...item, hsCode: e.target.value }))}
+                      placeholder="e.g. 6204.42 (Clothes) or 6403.99 (Shoes)"
+                      className="w-full rounded-none border border-zinc-200 bg-white px-4 py-3 text-sm font-mono outline-none focus:border-[#5e1914] focus:ring-1 focus:ring-[#5e1914]"
+                    />
+                    <select
+                      value={itemDraft.hsCode}
+                      onChange={(e) => {
+                        const selectedCode = e.target.value;
+                        const match = HS_DATABASE.find((h) => h.code === selectedCode);
+                        setItemDraft((draft) => ({
+                          ...draft,
+                          hsCode: selectedCode,
+                          name: draft.name.trim() ? draft.name : (match?.name || draft.name),
+                        }));
+                      }}
+                      className="border border-zinc-200 bg-zinc-50 px-3 py-3 text-xs font-semibold text-zinc-800 outline-none hover:bg-zinc-100"
+                    >
+                      <option value="">-- Choose Standard HS Code --</option>
+                      {HS_DATABASE.map((item) => (
+                        <option key={item.code} value={item.code}>
+                          {item.code} — {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </label>
+                <p className="mt-1 text-[11px] text-zinc-400">
+                  Required for DHL air freight customs declaration and clearance.
+                </p>
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 <NumberField
                   label="Weight (kg) *"
@@ -1158,20 +1274,22 @@ function AddressStep({
               value={address.postalCode}
               onChange={(value) => setAddress({ ...address, postalCode: value })}
             />
-            <TextField
+            <PhoneFieldWithPrefix
               label="Phone Number *"
               value={address.phone}
               onChange={(value) => setAddress({ ...address, phone: value })}
+              country={address.country}
             />
             <TextField
               label="Email Address (Optional)"
               value={address.email}
               onChange={(value) => setAddress({ ...address, email: value })}
             />
-            <TextField
+            <PhoneFieldWithPrefix
               label="Alternate Phone Number (Optional)"
               value={address.alternatePhone}
               onChange={(value) => setAddress({ ...address, alternatePhone: value })}
+              country={address.country}
             />
           </div>
         </div>
@@ -1385,6 +1503,87 @@ function AddressPreview({ address }: { address: Address }) {
       {address.phone ? <p>{address.phone}{address.alternatePhone ? `, ${address.alternatePhone}` : ""}</p> : null}
       <p>{compactAddress(address)}</p>
     </div>
+  );
+}
+
+function PhoneFieldWithPrefix({
+  label,
+  value,
+  onChange,
+  country,
+  className = "",
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  country?: string;
+  className?: string;
+}) {
+  const parsed = splitPhoneNumber(value, country);
+  const [selectedPrefix, setSelectedPrefix] = useState(parsed.prefix);
+  const [localNumber, setLocalNumber] = useState(parsed.localNumber);
+
+  useEffect(() => {
+    if (country) {
+      const p = getPrefixForCountry(country);
+      setSelectedPrefix(p);
+      if (localNumber) {
+        onChange(formatFullPhone(p, localNumber));
+      }
+    }
+  }, [country]);
+
+  useEffect(() => {
+    const p = splitPhoneNumber(value, country);
+    if (p.prefix) setSelectedPrefix(p.prefix);
+    setLocalNumber(p.localNumber);
+  }, [value]);
+
+  const handlePrefixChange = (p: string) => {
+    setSelectedPrefix(p);
+    onChange(formatFullPhone(p, localNumber));
+  };
+
+  const handleLocalChange = (text: string) => {
+    if (text.trim().startsWith("+")) {
+      const rep = splitPhoneNumber(text, country);
+      setSelectedPrefix(rep.prefix);
+      setLocalNumber(rep.localNumber);
+      onChange(formatFullPhone(rep.prefix, rep.localNumber));
+      return;
+    }
+    const clean = text.replace(/[^\d\s-]/g, "").replace(/^0+/, "");
+    setLocalNumber(clean);
+    onChange(formatFullPhone(selectedPrefix, clean));
+  };
+
+  return (
+    <label className={`block ${className}`}>
+      <span className="mb-2 block text-sm font-medium text-zinc-700">{label}</span>
+      <div className="flex border border-zinc-200 bg-white focus-within:border-[#5e1914] focus-within:ring-1 focus-within:ring-[#5e1914]">
+        <select
+          value={selectedPrefix}
+          onChange={(e) => handlePrefixChange(e.target.value)}
+          className="max-w-[130px] border-r border-zinc-200 bg-zinc-50 px-2 py-3 text-xs font-semibold text-zinc-800 outline-none hover:bg-zinc-100"
+        >
+          {COUNTRY_PHONE_PREFIXES.map((item) => (
+            <option key={`${item.country}-${item.prefix}-${item.code}`} value={item.prefix}>
+              {item.code ? `${item.code} (${item.prefix})` : `${item.prefix} ${item.country}`}
+            </option>
+          ))}
+        </select>
+        <input
+          type="tel"
+          value={localNumber}
+          onChange={(e) => handleLocalChange(e.target.value)}
+          placeholder="e.g. 801 234 5678"
+          className="w-full rounded-none bg-transparent px-3 py-3 text-sm outline-none"
+        />
+      </div>
+      <span className="mt-1 block text-[11px] text-zinc-400">
+        International: <span className="font-mono text-zinc-600">{formatFullPhone(selectedPrefix, localNumber) || `${selectedPrefix} ...`}</span>
+      </span>
+    </label>
   );
 }
 
