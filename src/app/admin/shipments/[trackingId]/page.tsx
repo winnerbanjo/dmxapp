@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowLeft, Copy, FileText, PackageCheck, RefreshCw, Save, ShieldCheck, Truck } from "lucide-react";
+import { ArrowLeft, Copy, FileText, PackageCheck, Printer, RefreshCw, Save, ShieldCheck, Truck } from "lucide-react";
 import { ADMIN_DEMO_SHIPMENTS } from "@/data/demo-shipments";
 import { connectLegacyDB } from "@/lib/legacy/connection";
 import mongoose from "mongoose";
@@ -102,15 +102,29 @@ export default async function AdminShipmentDetailPage({ params }: PageProps) {
           <p className="mt-1 text-sm text-zinc-500">{shipment.merchant} · {shipment.origin} to {shipment.destination}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <a
+            href={`/shipments/${encodeURIComponent(shipment.trackingId)}/label?print=true`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 border border-[#5e1914] bg-[#5e1914] px-4 py-2 text-sm font-semibold text-white hover:bg-[#4a130f]"
+          >
+            <Printer className="h-4 w-4" />
+            Print Label
+          </a>
+          <a
+            href={`/shipments/${encodeURIComponent(shipment.trackingId)}/waybill?print=true`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-50"
+          >
+            <FileText className="h-4 w-4 text-[#5e1914]" />
+            Air Waybill
+          </a>
           <Link href={`/admin/booking?duplicate=${encodeURIComponent(shipment.trackingId)}`} className="inline-flex items-center gap-2 border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">
             <Copy className="h-4 w-4" />
             Duplicate
           </Link>
-          <button type="button" className="inline-flex items-center gap-2 border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]">
-            <Save className="h-4 w-4" />
-            Save draft
-          </button>
-          <Link href={`/track/${encodeURIComponent(shipment.trackingId)}`} className="inline-flex items-center gap-2 bg-[#5e1914] px-4 py-2 text-sm font-semibold text-white hover:bg-[#4a130f]">
+          <Link href={`/track/${encodeURIComponent(shipment.trackingId)}`} className="inline-flex items-center gap-2 border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50">
             <Truck className="h-4 w-4" />
             Public tracking
           </Link>

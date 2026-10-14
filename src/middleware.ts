@@ -10,7 +10,7 @@ const SESSION_COOKIES = [
 ];
 
 const PROTECTED_PREFIXES = ["/dashboard", "/admin", "/merchant", "/customer", "/hub"];
-const PUBLIC_PREFIXES = ["/auth", "/api", "/track", "/login"];
+const PUBLIC_PREFIXES = ["/auth", "/api", "/track", "/login", "/shipments"];
 const PUBLIC_PATHS = ["/admin/login", "/merchant/login", "/hub/login"];
 
 function isProtectedPath(pathname: string): boolean {

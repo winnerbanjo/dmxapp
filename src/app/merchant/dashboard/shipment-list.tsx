@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { getWhatsAppUpdateUrl } from "@dmx/lib/whatsapp-url";
 import { formatDemoDateOnly } from "@/lib/demo-date";
-import { FileDown, MessageCircle, MapPin, Eye, Pencil } from "lucide-react";
+import { FileDown, MessageCircle, MapPin, Eye, Pencil, Printer } from "lucide-react";
 import { TrackModal, type ShipmentForModal } from "./shipments/track-modal";
 
 type ShipmentRow = {
@@ -34,6 +34,11 @@ export function ShipmentList({ shipments }: { shipments: ShipmentRow[] }) {
   function handleDownloadWaybill(id: string) {
     const base = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
     window.open(`${base}/api/merchant/shipments/${id}/waybill`, "_blank");
+  }
+
+  function handlePrintLabel(trackingId: string) {
+    const base = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
+    window.open(`${base}/shipments/${encodeURIComponent(trackingId)}/label?print=true`, "_blank");
   }
 
   function formatDateCell(createdAt: string): string {
@@ -127,6 +132,15 @@ export function ShipmentList({ shipments }: { shipments: ShipmentRow[] }) {
                   >
                     <MapPin strokeWidth={1} className="h-4 w-4" />
                     Track
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePrintLabel(s.trackingId)}
+                    className="inline-flex items-center gap-2 rounded-none border border-zinc-100 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]"
+                    title="Print 4x6 Shipping Label"
+                  >
+                    <Printer strokeWidth={1} className="h-4 w-4 text-[#5e1914]" />
+                    Label
                   </button>
                   <button
                     type="button"

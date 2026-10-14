@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Copy, FileText, Loader2, RefreshCw, Search } from "lucide-react";
+import { Copy, FileText, Loader2, Printer, RefreshCw, Search } from "lucide-react";
 
 interface RealShipment {
   id: string;
@@ -232,7 +232,8 @@ export function AdminShipmentsTable() {
                       <div className="flex items-center gap-1.5">
                         <Link
                           href={`/track/${trackingStr}`}
-                          className="border border-zinc-200 bg-white px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]"
+                          className="border border-zinc-200 bg-white px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]"
+                          title="Track on DMX"
                         >
                           Track
                         </Link>
@@ -244,6 +245,26 @@ export function AdminShipmentsTable() {
                           title="Track on DHL Express"
                         >
                           DHL
+                        </a>
+                        <a
+                          href={`/shipments/${trackingStr}/label?print=true`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 border border-[#5e1914] bg-[#5e1914] px-2 py-1 text-xs font-semibold text-white hover:bg-[#4a130f]"
+                          title="Print 4x6 Shipping Label"
+                        >
+                          <Printer className="h-3 w-3" />
+                          <span>Label</span>
+                        </a>
+                        <a
+                          href={`/shipments/${trackingStr}/waybill?print=true`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 border border-zinc-300 bg-white px-2 py-1 text-xs font-semibold text-zinc-800 hover:bg-zinc-50"
+                          title="View / Print Air Waybill"
+                        >
+                          <FileText className="h-3 w-3 text-[#5e1914]" />
+                          <span>Waybill</span>
                         </a>
                       </div>
                     </td>

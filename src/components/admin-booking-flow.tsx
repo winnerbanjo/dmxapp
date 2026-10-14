@@ -7,12 +7,14 @@ import {
   Copy,
   Edit3,
   ExternalLink,
+  FileText,
   Loader2,
   Mail,
   MapPin,
   Package,
   Phone,
   Plus,
+  Printer,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -439,9 +441,27 @@ export function AdminBookingFlow() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2.5">
+            <a
+              href={`/shipments/${confirmedShipment?.trackingNumber ?? "132718"}/label?print=true`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-none border border-[#5e1914] bg-[#5e1914] px-5 py-3 text-sm font-semibold text-white hover:bg-[#4a130f]"
+            >
+              <Printer className="h-4 w-4" />
+              <span>Print Label</span>
+            </a>
+            <a
+              href={`/shipments/${confirmedShipment?.trackingNumber ?? "132718"}/waybill?print=true`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-none border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-900 hover:bg-zinc-50"
+            >
+              <FileText className="h-4 w-4 text-[#5e1914]" />
+              <span>Air Waybill</span>
+            </a>
             <Link
               href={`/track/${confirmedShipment?.trackingNumber ?? "132718"}`}
-              className="rounded-none bg-[#5e1914] px-5 py-3 text-sm font-semibold text-white hover:bg-[#4a130f]"
+              className="border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
             >
               Track on DMX
             </Link>
