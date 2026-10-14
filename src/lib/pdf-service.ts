@@ -1,11 +1,66 @@
 import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
 import type { ShipmentDocData } from "./shipment-document";
+import { formatDhlLabelData } from "./dhl-label-helper";
+
+const CODE128_PATTERNS = [
+  "212222", "222122", "222221", "121223", "121322", "131222", "122213", "122312", "132212", "221213",
+  "221312", "231212", "112232", "122132", "122231", "113222", "123122", "123221", "223211", "221132",
+  "221231", "213212", "223112", "312131", "311222", "321122", "321221", "312212", "322112", "322211",
+  "212123", "212321", "232121", "111323", "131123", "131321", "112313", "132113", "132311", "211313",
+  "231113", "231311", "112133", "112331", "132131", "113123", "113321", "133121", "313121", "211331",
+  "231131", "213113", "213311", "213131", "311123", "311321", "331121", "312113", "312311", "332111",
+  "314111", "221411", "431111", "111224", "111422", "121124", "121421", "141122", "141221", "112214",
+  "112412", "122114", "122411", "142112", "142211", "241211", "221114", "413111", "241112", "134111",
+  "111242", "121142", "121241", "114212", "124112", "124211", "411212", "421112", "421211", "212141",
+  "214121", "412121", "111143", "111341", "131141", "114113", "114311", "411113", "411311", "113141",
+  "114131", "311141", "411131", "211412", "211214", "211232", "2331112"
+];
+
+function drawCode128Pdf(doc: jsPDF, text: string, x: number, y: number, targetWidth: number, height: number) {
+  let checksum = 104;
+  const indices: number[] = [104];
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i) - 32;
+    if (code >= 0 && code <= 95) {
+      indices.push(code);
+      checksum += code * (i + 1);
+    }
+  }
+  indices.push(checksum % 103);
+  indices.push(106);
+
+  let totalUnits = 0;
+  for (const idx of indices) {
+    const pattern = CODE128_PATTERNS[idx];
+    if (!pattern) continue;
+    for (let p = 0; p < pattern.length; p++) {
+      totalUnits += parseInt(pattern[p], 10);
+    }
+  }
+
+  const moduleWidth = targetWidth / totalUnits;
+  let currentX = x;
+  doc.setFillColor(0, 0, 0);
+
+  for (const idx of indices) {
+    const pattern = CODE128_PATTERNS[idx];
+    if (!pattern) continue;
+    for (let p = 0; p < pattern.length; p++) {
+      const w = parseInt(pattern[p], 10) * moduleWidth;
+      if (p % 2 === 0) {
+        doc.rect(currentX, y, w, height, "F");
+      }
+      currentX += w;
+    }
+  }
+}
 
 /**
- * Generates an official 4" x 6" (101.6mm x 152.4mm) thermal parcel shipping label.
+ * Generates an authentic DHL Express 4" x 6" (101.6mm x 152.4mm) thermal parcel shipping label.
  */
 export async function generateShippingLabelPdf(data: ShipmentDocData): Promise<Buffer> {
+  const dhl = formatDhlLabelData(data);
   const doc = new jsPDF({
     format: [101.6, 152.4],
     unit: "mm",
@@ -13,192 +68,237 @@ export async function generateShippingLabelPdf(data: ShipmentDocData): Promise<B
   });
 
   const width = 101.6;
-  const height = 152.4;
-  const margin = 5;
+  const margin = 4;
+  const contentWidth = width - margin * 2;
+  let y = margin + 3;
 
-  // Outer border
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.6);
-  doc.rect(margin, margin, width - margin * 2, height - margin * 2);
-
-  let y = margin + 5;
-
-  // 1. Header: DMX LOGISTICS & DHL PARTNER
+  // 1. Header: EXPRESS WORLDWIDE | WPX | DHL
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.setTextColor(94, 25, 20); // DMX Burgundy #5e1914
-  doc.text("DMX LOGISTICS", margin + 3, y);
-
-  doc.setFontSize(9);
-  doc.setTextColor(0, 0, 0);
-  doc.text("EXPRESS WORLDWIDE", width - margin - 3, y, { align: "right" });
-
-  y += 4;
-  doc.setFontSize(7);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(100, 100, 100);
-  doc.text("AIR CARRIAGE & GLOBAL FREIGHT", margin + 3, y);
-  doc.text("PARTNER: DHL EXPRESS", width - margin - 3, y, { align: "right" });
-
-  y += 3;
-  doc.setLineWidth(0.4);
-  doc.line(margin, y, width - margin, y);
-
-  // 2. Shipper (FROM) Box
-  y += 4;
-  doc.setFontSize(7);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(80, 80, 80);
-  doc.text("FROM (SHIPPER):", margin + 3, y);
-
-  y += 3.5;
-  doc.setFontSize(8);
-  doc.setTextColor(0, 0, 0);
-  doc.setFont("helvetica", "bold");
-  doc.text(data.shipper.name, margin + 3, y);
-  doc.setFont("helvetica", "normal");
-  if (data.shipper.company) {
-    y += 3;
-    doc.text(data.shipper.company, margin + 3, y);
-  }
-  y += 3;
-  doc.text(`${data.shipper.address}, ${data.shipper.city}, ${data.shipper.country}`, margin + 3, y);
-  y += 3;
-  doc.text(`TEL: ${data.shipper.phone}`, margin + 3, y);
-
-  y += 3;
-  doc.setLineWidth(0.4);
-  doc.line(margin, y, width - margin, y);
-
-  // 3. Consignee (SHIP TO) Box - Prominent
-  y += 4;
-  doc.setFontSize(7);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(80, 80, 80);
-  doc.text("SHIP TO (CONSIGNEE):", margin + 3, y);
-
-  y += 4;
   doc.setFontSize(11);
   doc.setTextColor(0, 0, 0);
-  doc.text(data.receiver.name.toUpperCase(), margin + 3, y);
+  doc.text("EXPRESS WORLDWIDE", margin, y);
 
-  y += 4;
-  doc.setFontSize(9);
+  y += 2.5;
   doc.setFont("helvetica", "normal");
-  if (data.receiver.company) {
-    doc.text(data.receiver.company, margin + 3, y);
-    y += 3.5;
-  }
-  doc.text(data.receiver.address, margin + 3, y);
-  y += 3.5;
-  doc.text(`${data.receiver.city} ${data.receiver.postalCode || ""}`, margin + 3, y);
+  doc.setFontSize(5.5);
+  doc.text(`${dhl.dateStr} MyDHL API 1.0 / *GLS certified label*`, margin, y);
 
-  y += 5;
+  // WPX Solid Box
+  const wpxWidth = 14;
+  const wpxHeight = 7;
+  const wpxX = width - margin - 32;
+  doc.setFillColor(0, 0, 0);
+  doc.rect(wpxX, margin + 0.5, wpxWidth, wpxHeight, "F");
+  doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
-  doc.text(data.receiver.country.toUpperCase(), margin + 3, y);
+  doc.setFontSize(11);
+  doc.text("WPX", wpxX + 2.5, margin + 5.5);
 
-  y += 4;
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  doc.text(`TEL: ${data.receiver.phone}`, margin + 3, y);
+  // DHL Logo Mark (Italic DHL with Speed Stripes)
+  const dhlX = width - margin - 16;
+  doc.setFillColor(0, 0, 0);
+  // Left stripes
+  doc.rect(dhlX - 5.5, margin + 2.5, 2.5, 0.4, "F");
+  doc.rect(dhlX - 4.5, margin + 3.5, 3.5, 0.4, "F");
+  doc.rect(dhlX - 3.5, margin + 4.5, 4.5, 0.5, "F");
+  // Text DHL
+  doc.setTextColor(0, 0, 0);
+  doc.setFont("helvetica", "bolditalic");
+  doc.setFontSize(14);
+  doc.text("DHL", dhlX - 2.5, margin + 6);
+  // Right stripes
+  doc.rect(dhlX + 7.5, margin + 2.5, 4.5, 0.5, "F");
+  doc.rect(dhlX + 7.5, margin + 3.5, 3.5, 0.4, "F");
+  doc.rect(dhlX + 7.5, margin + 4.5, 2.5, 0.4, "F");
 
-  y += 3;
+  // Divider line
+  y = margin + 8.5;
+  doc.setLineWidth(0.4);
+  doc.setDrawColor(0, 0, 0);
   doc.line(margin, y, width - margin, y);
 
-  // 4. Barcode & QR Code Section
-  const qrSize = 24;
-  const qrX = width - margin - qrSize - 3;
-  const qrY = y + 3;
-
-  try {
-    const qrDataUrl = await QRCode.toDataURL(data.trackUrl, { width: 140, margin: 0 });
-    doc.addImage(qrDataUrl, "PNG", qrX, qrY, qrSize, qrSize);
-  } catch (e) {
-    // QR fallback
-  }
-
-  y += 5;
+  // 2. Shipper (From) & Origin Airport Code
+  y += 3;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.text("WAYBILL / AWB NUMBER:", margin + 3, y);
+  doc.setFontSize(6.5);
+  doc.setTextColor(0, 0, 0);
+  doc.text("From :", margin, y);
 
-  y += 5;
-  doc.setFontSize(14);
-  doc.text(data.trackingNumber, margin + 3, y);
-
-  if (data.dhlTrackingNumber) {
-    y += 4;
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.text(`DHL AWB: ${data.dhlTrackingNumber}`, margin + 3, y);
-  }
-
-  y += 5;
-  doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(90, 90, 90);
-  doc.text("Scan QR to track live on DMX Network", margin + 3, y);
+  doc.text(dhl.shipper.name, margin + 9, y);
+  y += 2.8;
+  doc.text(dhl.shipper.company, margin + 9, y);
+  y += 2.8;
+  doc.text(dhl.shipper.address, margin + 9, y);
+  y += 2.8;
+  doc.text(dhl.shipper.cityState, margin + 9, y);
+  y += 2.8;
+  doc.text(dhl.shipper.country, margin + 9, y);
 
-  y = qrY + qrSize + 3;
+  // Origin Airport on right
+  const originX = width - margin - 14;
+  doc.setFontSize(6);
+  doc.text("Origin:", originX, y - 8);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text(dhl.originAirport, originX, y - 2);
+
+  // Divider line
+  y += 2.5;
+  doc.line(margin, y, width - margin, y);
+
+  // 3. Corner-Bracketed Recipient (To) Section
+  y += 2;
+  const toBoxTopY = y;
+  const bracketSize = 3.5;
+
+  // Top-left bracket
+  doc.setLineWidth(0.6);
+  doc.line(margin, toBoxTopY + bracketSize, margin, toBoxTopY);
+  doc.line(margin, toBoxTopY, margin + bracketSize, toBoxTopY);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.text("To :", margin + bracketSize + 1, toBoxTopY + 2.5);
+
+  // Top-right bracket
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.5);
+  doc.text("Contact:", width - margin - bracketSize - 11, toBoxTopY + 2.5);
+  doc.line(width - margin - bracketSize, toBoxTopY, width - margin, toBoxTopY);
+  doc.line(width - margin, toBoxTopY, width - margin, toBoxTopY + bracketSize);
+
+  // Recipient details
+  y += 4;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(dhl.receiver.name, margin + 8, y);
+  y += 3.2;
+  doc.text(dhl.receiver.company, margin + 8, y);
+  y += 3.2;
+  doc.text(dhl.receiver.address, margin + 8, y);
+  y += 4;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9.5);
+  doc.text(dhl.receiver.cityStatePostal, margin + 8, y);
+  y += 4;
+  doc.setFontSize(9.5);
+  doc.text(dhl.receiver.country, margin + 8, y);
+
+  // Bottom brackets
+  const toBoxBottomY = y + 2;
+  doc.setLineWidth(0.6);
+  doc.line(margin, toBoxBottomY - bracketSize, margin, toBoxBottomY);
+  doc.line(margin, toBoxBottomY, margin + bracketSize, toBoxBottomY);
+  doc.line(width - margin - bracketSize, toBoxBottomY, width - margin, toBoxBottomY);
+  doc.line(width - margin, toBoxBottomY - bracketSize, width - margin, toBoxBottomY);
+
+  // Divider line
+  y = toBoxBottomY + 2;
   doc.setLineWidth(0.4);
   doc.line(margin, y, width - margin, y);
 
-  // 5. Weight, Dimensions & Date Grid
-  y += 4;
-  doc.setFontSize(7);
+  // 4. Routing Code Row
+  y += 4.5;
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(80, 80, 80);
-  doc.text("WEIGHT", margin + 3, y);
-  doc.text("CHG WEIGHT", margin + 28, y);
-  doc.text("PCS", margin + 55, y);
-  doc.text("DATE", width - margin - 3, y, { align: "right" });
+  doc.setFontSize(14);
+  doc.text(dhl.routingCode, margin, y);
+  doc.rect(width - margin - 2, y - 2.5, 1.8, 1.8, "F");
 
-  y += 4;
+  // Divider line
+  y += 2.5;
+  doc.line(margin, y, width - margin, y);
+
+  // 5. Service Box (C-ADI) & Day/Time Columns
+  const serviceBoxY = y;
+  const serviceBoxHeight = 5.5;
+  doc.setFillColor(0, 0, 0);
+  doc.rect(margin, serviceBoxY, 18, serviceBoxHeight, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
+  doc.text(dhl.serviceCode, margin + 2.5, serviceBoxY + 4);
+
+  // Day & Time columns
   doc.setTextColor(0, 0, 0);
-  doc.text(`${data.actualWeight.toFixed(2)} kg`, margin + 3, y);
-  doc.text(`${data.chargeableWeight.toFixed(2)} kg`, margin + 28, y);
-  doc.text("1 / 1", margin + 55, y);
-  const formattedDate = new Date(data.dateAdded).toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-  doc.text(formattedDate, width - margin - 3, y, { align: "right" });
-
-  y += 3;
-  doc.line(margin, y, width - margin, y);
-
-  // 6. Customs & Declared Goods Summary
-  y += 4;
-  doc.setFontSize(7);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(80, 80, 80);
-  doc.text("CUSTOMS DECLARATION & COMMODITY:", margin + 3, y);
-
-  y += 3.5;
-  doc.setFontSize(8);
-  doc.setTextColor(0, 0, 0);
-  const firstItem = data.items[0] || { name: "Goods", hsCode: "6204.42", value: 50000, origin: "Nigeria" };
-  doc.text(firstItem.name.substring(0, 42), margin + 3, y);
-
-  y += 3.5;
-  doc.setFontSize(7.5);
   doc.setFont("helvetica", "normal");
-  doc.text(`HS TARIFF: ${firstItem.hsCode || "6204.42"}  |  ORIGIN: ${firstItem.origin || "Nigeria"}`, margin + 3, y);
+  doc.setFontSize(5.5);
+  doc.line(width - margin - 24, serviceBoxY, width - margin - 24, serviceBoxY + serviceBoxHeight);
+  doc.text("Day", width - margin - 20, serviceBoxY + 2.5);
+  doc.line(width - margin - 12, serviceBoxY, width - margin - 12, serviceBoxY + serviceBoxHeight);
+  doc.text("Time", width - margin - 8, serviceBoxY + 2.5);
 
-  y += 3.5;
-  doc.text(`DECLARED VALUE: NGN ${firstItem.value.toLocaleString()}  |  PACKAGING: ${data.packaging}`, margin + 3, y);
-
-  y += 3;
+  y += serviceBoxHeight;
   doc.line(margin, y, width - margin, y);
 
-  // 7. Footer
+  // 6. Ref No, Content & Weight Summary
+  y += 3;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.5);
+  doc.text("Ref No:", margin, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(dhl.refNo, margin + 11, y);
+
+  y += 3;
+  doc.setFont("helvetica", "bold");
+  doc.text("Content :", margin, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(dhl.content.substring(0, 32), margin + 12, y);
+
+  // Weight & Piece on right
+  const weightX = width - margin - 32;
+  const pieceX = width - margin - 12;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(5.5);
+  doc.text("Pce/Shpt Weight", weightX, y - 3.5);
+  doc.text("Piece", pieceX, y - 3.5);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text(dhl.weightKg, weightX, y + 1);
+  doc.text(dhl.piece, pieceX, y + 1);
+
+  // Divider line before Barcodes
   y += 3.5;
-  doc.setFontSize(6);
-  doc.setTextColor(110, 110, 110);
-  doc.text("Security Inspected & Cleared for Air Carriage. Standard DMX Carriage Conditions Apply.", margin + 3, y);
+  doc.line(margin, y, width - margin, y);
+
+  // 7. Barcode 1: Waybill Barcode
+  y += 2;
+  const rawWaybill = dhl.waybillFormatted.replace(/\s/g, "");
+  drawCode128Pdf(doc, rawWaybill, margin + 12, y, contentWidth - 24, 11);
+  y += 13.5;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.text(`WAYBILL ${dhl.waybillFormatted}`, width / 2, y, { align: "center" });
+
+  // Divider line
+  y += 2.5;
+  doc.line(margin, y, width - margin, y);
+
+  // 8. Barcode 2: 2L Routing Barcode
+  y += 2.5;
+  drawCode128Pdf(doc, dhl.twoLCode, margin + 6, y, contentWidth - 12, 17);
+  y += 19.5;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.text(dhl.twoLCode, width / 2, y, { align: "center" });
+
+  // Divider line
+  y += 2.5;
+  doc.line(margin, y, width - margin, y);
+
+  // 9. Barcode 3: J-Code Piece Identifier
+  y += 3;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.5);
+  doc.text("Ref Code:", margin, y);
+
+  y += 1.5;
+  const rawJCode = dhl.jCodeFormatted.replace(/[^A-Za-z0-9]/g, "");
+  drawCode128Pdf(doc, rawJCode, margin + 6, y, contentWidth - 12, 17);
+  y += 19.5;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.text(dhl.jCodeFormatted, width / 2, y, { align: "center" });
 
   return Buffer.from(doc.output("arraybuffer"));
 }
