@@ -21,8 +21,11 @@ export function generateTrackingId(): string {
 }
 
 /**
- * Validate format DMX-XXXX or DMX-XXXX-XXXX (case insensitive)
+ * Validate format: accepts standard DMX format (DMX-XXXX-XXXX), numeric tracking numbers (e.g. 132721),
+ * DHL AWBs (10 digits), or alphanumeric reference codes (3 to 40 chars).
  */
 export function isValidTrackingFormat(trackingId: string): boolean {
-  return /^DMX-[A-Z0-9]{4}(-[A-Z0-9]{4})?$/i.test(trackingId.trim());
+  if (!trackingId || typeof trackingId !== "string") return false;
+  const clean = trackingId.trim();
+  return /^[A-Za-z0-9\-_]{3,40}$/.test(clean);
 }

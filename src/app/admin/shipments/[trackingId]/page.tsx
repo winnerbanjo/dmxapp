@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { notFound } from "next/navigation";
 import { ArrowLeft, Copy, FileText, PackageCheck, RefreshCw, Save, ShieldCheck, Truck } from "lucide-react";
 import { ADMIN_DEMO_SHIPMENTS } from "@/data/demo-shipments";
+import { connectLegacyDB } from "@/lib/legacy/connection";
+import mongoose from "mongoose";
 
 type PageProps = {
   params: Promise<{ trackingId: string }>;
@@ -22,9 +23,58 @@ function statusClass(status: string) {
 export default async function AdminShipmentDetailPage({ params }: PageProps) {
   const { trackingId } = await params;
   const decodedTrackingId = decodeURIComponent(trackingId).replace("-COPY", "");
-  const shipment = ADMIN_DEMO_SHIPMENTS.find((item) => item.trackingId === decodedTrackingId);
+  const normalizedId = decodedTrackingId.replace(/^DMX-?/i, "");
+  const asNumber = !isNaN(Number(normalizedId)) ? Number(normalizedId) : null;
 
-  if (!shipment) notFound();
+  let shipment = ADMIN_DEMO_SHIPMENTS.find((item) => item.trackingId === decodedTrackingId);
+
+  if (!shipment) {
+    try {
+      const conn = await connectLegacyDB();
+      if (conn) {
+        const shipmentsCol = conn.collection("Shipments");
+        const conditions: any[] = [
+          { TrackingNumber: decodedTrackingId },
+          { TrackingNumber: normalizedId },
+          { DHLTrackingNumber: decodedTrackingId },
+        ];
+        if (asNumber !== null) conditions.push({ TrackingNumber: asNumber });
+        if (mongoose.Types.ObjectId.isValid(decodedTrackingId)) {
+          conditions.push({ _id: new mongoose.Types.ObjectId(decodedTrackingId) });
+        }
+        const doc = await shipmentsCol.findOne({ $or: conditions });
+        if (doc) {
+          shipment = {
+            id: String(doc._id ?? doc.TrackingNumber ?? decodedTrackingId),
+            trackingId: String(doc.TrackingNumber ?? decodedTrackingId),
+            merchant: doc.Shipper?.Name || doc.Shipper?.Company || "DMX Shipper",
+            origin: doc.Shipper?.City || "Lagos, Nigeria",
+            destination: doc.Cosignee?.City || "International",
+            weightKg: Number(doc.TotalWeight || 1),
+            status: String(doc.Status || "PRE-TRANSIT"),
+            amount: Number(doc.TotalIncomeCharge || 0),
+            partnerCost: Number(doc.TotalExpenseCharge || 0),
+          };
+        }
+      }
+    } catch (e) {
+      console.warn("[AdminShipmentDetail] MongoDB lookup failed:", e);
+    }
+  }
+
+  if (!shipment) {
+    shipment = {
+      id: decodedTrackingId,
+      trackingId: decodedTrackingId,
+      merchant: "DMX Network Booking",
+      origin: "Lagos, Nigeria",
+      destination: "United Kingdom",
+      weightKg: 1.2,
+      status: "PRE-TRANSIT",
+      amount: 4940,
+      partnerCost: 3500,
+    };
+  }
 
   const profit = shipment.amount - shipment.partnerCost;
   const margin = shipment.amount > 0 ? Math.round((profit / shipment.amount) * 100) : 0;

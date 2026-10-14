@@ -229,13 +229,22 @@ export function AdminShipmentsTable() {
                     </td>
                     <td className="px-6 py-4 text-zinc-500 text-xs">{formattedDate}</td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <Link
                           href={`/track/${trackingStr}`}
-                          className="border border-zinc-200 px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]"
+                          className="border border-zinc-200 bg-white px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:border-[#5e1914] hover:text-[#5e1914]"
                         >
                           Track
                         </Link>
+                        <a
+                          href={`https://www.dhl.com/en/express/tracking.html?AWB=${s.dhlTrackingNumber || trackingStr}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="border border-yellow-500 bg-[#FFCC00] px-2 py-1 text-xs font-bold text-zinc-950 hover:bg-yellow-400"
+                          title="Track on DHL Express"
+                        >
+                          DHL
+                        </a>
                       </div>
                     </td>
                   </tr>

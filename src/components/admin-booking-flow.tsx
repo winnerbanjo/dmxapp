@@ -6,6 +6,7 @@ import {
   Check,
   Copy,
   Edit3,
+  ExternalLink,
   Loader2,
   Mail,
   MapPin,
@@ -387,13 +388,22 @@ export function AdminBookingFlow() {
               })}
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2.5">
             <Link
               href={`/track/${confirmedShipment?.trackingNumber ?? "132718"}`}
               className="rounded-none bg-[#5e1914] px-5 py-3 text-sm font-semibold text-white hover:bg-[#4a130f]"
             >
-              Track shipment
+              Track on DMX
             </Link>
+            <a
+              href={`https://www.dhl.com/en/express/tracking.html?AWB=${confirmedShipment?.trackingNumber ?? "132718"}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-none border border-yellow-500 bg-[#FFCC00] px-5 py-3 text-sm font-bold text-zinc-950 hover:bg-yellow-400"
+            >
+              <span>Track on DHL</span>
+              <ExternalLink className="h-4 w-4" />
+            </a>
             <Link
               href="/admin/shipments"
               className="border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"

@@ -78,6 +78,7 @@ export default async function AdminDashboardPage() {
   const tableShipments: DashboardShipmentItem[] = rawRecent.map((s) => ({
     id: s.id,
     trackingNumber: s.trackingNumber,
+    dhlTrackingNumber: s.dhlTrackingNumber,
     description: s.description,
     type: s.type,
     status: s.status,
