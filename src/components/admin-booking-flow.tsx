@@ -168,6 +168,7 @@ export function AdminBookingFlow() {
   const [height, setHeight] = useState(10);
   const [items, setItems] = useState<ParcelItem[]>([]);
   const [showItemModal, setShowItemModal] = useState(false);
+  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [itemDraft, setItemDraft] = useState<ParcelItem>({
     name: "",
     hsCode: "",
@@ -333,14 +334,13 @@ export function AdminBookingFlow() {
     }
   }
 
-  function saveItem() {
-    if (!itemDraft.name.trim()) {
-      alert("Please enter an item name or description.");
-      return;
-    }
-    const detected = detectHsCode(itemDraft.name);
-    const resolvedHsCode = itemDraft.hsCode.trim() || detected?.code || "6204.42";
-    setItems((prev) => [...prev, { ...itemDraft, hsCode: resolvedHsCode }]);
+  function closeItemModal() {
+    setShowItemModal(false);
+    setEditingItemIndex(null);
+  }
+
+  function openAddItem() {
+    setEditingItemIndex(null);
     setItemDraft({
       name: "",
       hsCode: "",
@@ -349,11 +349,61 @@ export function AdminBookingFlow() {
       value: 50000,
       origin: "Nigeria",
     });
+    setShowItemModal(true);
+  }
+
+  function editItem(index: number) {
+    const item = items[index];
+    if (!item) return;
+    setEditingItemIndex(index);
+    setItemDraft({
+      name: item.name ?? "",
+      hsCode: item.hsCode ?? "",
+      weight: item.weight ?? 1,
+      quantity: item.quantity ?? 1,
+      value: item.value ?? 50000,
+      origin: item.origin ?? "Nigeria",
+    });
+    setShowItemModal(true);
+  }
+
+  function saveItem() {
+    if (!itemDraft.name.trim()) {
+      alert("Please enter an item name or description.");
+      return;
+    }
+    const detected = detectHsCode(itemDraft.name);
+    const resolvedHsCode = itemDraft.hsCode.trim() || detected?.code || "6204.42";
+    const itemToSave = { ...itemDraft, hsCode: resolvedHsCode };
+
+    if (editingItemIndex !== null) {
+      setItems((prev) => {
+        const next = [...prev];
+        next[editingItemIndex] = itemToSave;
+        return next;
+      });
+    } else {
+      setItems((prev) => [...prev, itemToSave]);
+    }
+
+    setItemDraft({
+      name: "",
+      hsCode: "",
+      weight: 1,
+      quantity: 1,
+      value: 50000,
+      origin: "Nigeria",
+    });
+    setEditingItemIndex(null);
     setShowItemModal(false);
   }
 
   function removeItem(index: number) {
     setItems((prev) => prev.filter((_, i) => i !== index));
+    if (editingItemIndex === index) {
+      setEditingItemIndex(null);
+      setShowItemModal(false);
+    }
   }
 
   if (confirmed) {
@@ -526,7 +576,7 @@ export function AdminBookingFlow() {
                     <h3 className="font-semibold text-zinc-900">Declared Items ({items.length})</h3>
                     <button
                       type="button"
-                      onClick={() => setShowItemModal(true)}
+                      onClick={openAddItem}
                       className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#5e1914] hover:underline"
                     >
                       <Plus className="h-4 w-4" /> Add Item
@@ -540,7 +590,7 @@ export function AdminBookingFlow() {
                       <p className="mt-1 text-xs text-zinc-500">Please click &quot;Add Item&quot; to declare what is inside the shipment.</p>
                       <button
                         type="button"
-                        onClick={() => setShowItemModal(true)}
+                        onClick={openAddItem}
                         className="mt-4 rounded-none bg-[#5e1914] px-4 py-2 text-xs font-semibold text-white hover:bg-[#4a130f]"
                       >
                         + Add First Item
@@ -562,11 +612,20 @@ export function AdminBookingFlow() {
                             {item.quantity} pcs · {item.weight} kg · {money(item.value)} · Origin: {item.origin}
                           </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => editItem(idx)}
+                            className="flex items-center gap-1.5 border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:border-[#5e1914] hover:text-[#5e1914]"
+                            title="Edit item"
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                            <span>Edit</span>
+                          </button>
                           <button
                             type="button"
                             onClick={() => removeItem(idx)}
-                            className="border border-zinc-200 p-2 text-zinc-500 hover:text-red-600"
+                            className="border border-zinc-200 p-1.5 text-zinc-500 transition hover:border-red-300 hover:text-red-600"
                             title="Remove item"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -763,12 +822,16 @@ export function AdminBookingFlow() {
           <div className="w-full max-w-xl bg-white shadow-2xl">
             <div className="flex items-start justify-between border-b border-zinc-100 p-6">
               <div>
-                <h2 className="text-xl font-semibold text-zinc-900">Add Item to Package</h2>
+                <h2 className="text-xl font-semibold text-zinc-900">
+                  {editingItemIndex !== null ? "Edit Item in Consignment" : "Add Item to Package"}
+                </h2>
                 <p className="mt-1 text-sm text-zinc-500">
-                  Harmonized Tariff (HS) codes are automatically generated as you type items.
+                  {editingItemIndex !== null
+                    ? "Modify item description, HS tariff code, quantity, weight, and declared value."
+                    : "Harmonized Tariff (HS) codes are automatically generated as you type items."}
                 </p>
               </div>
-              <button onClick={() => setShowItemModal(false)}><X className="h-5 w-5" /></button>
+              <button onClick={closeItemModal} title="Close"><X className="h-5 w-5" /></button>
             </div>
             <div className="max-h-[75vh] overflow-y-auto space-y-4 p-6">
               {/* Quick Category Suggestions */}
@@ -900,7 +963,7 @@ export function AdminBookingFlow() {
             <div className="grid grid-cols-2 gap-3 border-t border-zinc-100 p-6">
               <button
                 type="button"
-                onClick={() => setShowItemModal(false)}
+                onClick={closeItemModal}
                 className="border border-[#5e1914] px-4 py-3 font-semibold text-[#5e1914]"
               >
                 Cancel
@@ -910,7 +973,7 @@ export function AdminBookingFlow() {
                 onClick={saveItem}
                 className="bg-[#5e1914] px-4 py-3 font-semibold text-white hover:bg-[#4a130f]"
               >
-                Save Item
+                {editingItemIndex !== null ? "Save Changes" : "Save Item"}
               </button>
             </div>
           </div>
