@@ -12,30 +12,50 @@ const JWT_SECRET = (process.env.JWT_SECRET || "").replace(/^["']|["']$/g, "").tr
 // Active admin ID used in production
 const DEFAULT_ADMIN_ID = "652d4dd12437062da15c5551";
 
-// Known MongoDB Country ObjectIds in DMX-Logistics DB
-const COUNTRY_ID_MAP: Record<string, string> = {
-  nigeria: "652d3bbccb00999fcfe79b95",
-  "united kingdom": "652d3bbccb00999fcfe79b99",
-  uk: "652d3bbccb00999fcfe79b99",
-  gb: "652d3bbccb00999fcfe79b99",
-  "united states": "652d3bbccb00999fcfe79bb0",
-  usa: "652d3bbccb00999fcfe79bb0",
-  us: "652d3bbccb00999fcfe79bb0",
-  canada: "652d3bbccb00999fcfe79baf",
-  ca: "652d3bbccb00999fcfe79baf",
-  ghana: "652d3bbccb00999fcfe79ba4",
-  gh: "652d3bbccb00999fcfe79ba4",
-  "south africa": "652d3bbccb00999fcfe79bb5",
-  germany: "652d3bbccb00999fcfe79bb4",
-  france: "652d3bbccb00999fcfe79bb3",
-  china: "652d3bbccb00999fcfe79bb1",
-};
+import countriesData from "@/data/countries.json";
+
+export interface CountryItem {
+  _id: string;
+  Name: string;
+  Code: string;
+  TelephoneCode?: string;
+  DHLZone?: number;
+  DHLProfitMargin?: number;
+}
+
+export const ALL_COUNTRIES: CountryItem[] = countriesData as CountryItem[];
+
+const COUNTRY_LOOKUP = new Map<string, string>();
+
+for (const c of ALL_COUNTRIES) {
+  COUNTRY_LOOKUP.set(c._id.toLowerCase(), c._id);
+  COUNTRY_LOOKUP.set(c.Name.toLowerCase().trim(), c._id);
+  if (c.Code) {
+    COUNTRY_LOOKUP.set(c.Code.toLowerCase().trim(), c._id);
+  }
+}
+
+// Aliases
+COUNTRY_LOOKUP.set("uk", "652d3bbccb00999fcfe79b99");
+COUNTRY_LOOKUP.set("usa", "652d3bbccb00999fcfe79bb1");
+COUNTRY_LOOKUP.set("u.s.a.", "652d3bbccb00999fcfe79bb1");
+COUNTRY_LOOKUP.set("united states", "652d3bbccb00999fcfe79bb1");
+COUNTRY_LOOKUP.set("united states of america", "652d3bbccb00999fcfe79bb1");
+COUNTRY_LOOKUP.set("u.k.", "652d3bbccb00999fcfe79b99");
+COUNTRY_LOOKUP.set("great britain", "652d3bbccb00999fcfe79b99");
 
 export function resolveCountryId(countryNameOrCode?: string): string {
-  if (!countryNameOrCode) return COUNTRY_ID_MAP.nigeria;
-  const key = countryNameOrCode.trim().toLowerCase();
-  if (/^[a-f\d]{24}$/i.test(key)) return countryNameOrCode;
-  return COUNTRY_ID_MAP[key] ?? COUNTRY_ID_MAP.nigeria;
+  if (!countryNameOrCode) return "652d3bbccb00999fcfe79b95"; // Nigeria
+  const clean = countryNameOrCode.trim();
+  if (/^[a-f\d]{24}$/i.test(clean)) return clean;
+  const lower = clean.toLowerCase();
+  const direct = COUNTRY_LOOKUP.get(lower);
+  if (direct) return direct;
+
+  const found = ALL_COUNTRIES.find((c) =>
+    c.Name.toLowerCase().includes(lower) || lower.includes(c.Name.toLowerCase())
+  );
+  return found ? found._id : "652d3bbccb00999fcfe79b95";
 }
 
 export function generateAdminBackendToken(): string {

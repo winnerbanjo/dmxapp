@@ -1,10 +1,41 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Check, Copy, Edit3, Loader2, Mail, MapPin, Package, Phone, RefreshCw, ShieldCheck, Trash2, Upload, X } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Edit3,
+  Loader2,
+  Mail,
+  MapPin,
+  Package,
+  Phone,
+  Plus,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
+import allCountriesData from "@/data/countries.json";
 
-type Step = "sender" | "receiver" | "items" | "carrier" | "addons" | "review";
+export interface CountryItem {
+  _id: string;
+  Name: string;
+  Code: string;
+  TelephoneCode?: string;
+  DHLZone?: number;
+  DHLProfitMargin?: number;
+}
+
+const sortedCountries: CountryItem[] = ([...allCountriesData] as CountryItem[]).sort((a, b) =>
+  a.Name.localeCompare(b.Name)
+);
+
+
+type Step = "sender" | "receiver" | "items" | "addons" | "carrier" | "review";
 
 type Address = {
   firstName: string;
@@ -51,32 +82,32 @@ const steps: { id: Step; label: string }[] = [
   { id: "review", label: "Review" },
 ];
 
-const starterSender: Address = {
-  firstName: "Abdulqudus",
-  lastName: "Folarin DMX",
-  email: "csdmxng@gmail.com",
-  phone: "+2349095305021",
-  alternatePhone: "+2349091384828",
-  address1: "3 Oriwu Street, Lekki, Nigeria",
-  address2: "3 Oriwu St, Lekki",
+const emptySender: Address = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  alternatePhone: "",
+  address1: "",
+  address2: "",
   country: "Nigeria",
-  state: "Lagos",
-  city: "Lekki",
-  postalCode: "106104",
+  state: "",
+  city: "",
+  postalCode: "",
 };
 
-const starterReceiver: Address = {
-  firstName: "DMX",
-  lastName: "Service",
-  email: "jumpus2003@yahoo.com",
-  phone: "+447867458320",
-  alternatePhone: "+447847951470",
-  address1: "Manchester, UK",
-  address2: "Manchester",
-  country: "United Kingdom",
-  state: "Aberdeen",
-  city: "Aberdeen",
-  postalCode: "M1 1AQ",
+const emptyReceiver: Address = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  alternatePhone: "",
+  address1: "",
+  address2: "",
+  country: "",
+  state: "",
+  city: "",
+  postalCode: "",
 };
 
 const baseRates: Rate[] = [
@@ -106,26 +137,39 @@ function money(value: number) {
 }
 
 function compactAddress(address: Address) {
-  return `${address.address1}, ${address.address2}, ${address.city}, ${address.state}, ${address.country}. ${address.postalCode}`;
+  const parts = [
+    address.address1,
+    address.address2,
+    address.city,
+    address.state,
+    address.country,
+    address.postalCode,
+  ].filter(Boolean);
+  return parts.join(", ");
 }
 
 export function AdminBookingFlow() {
   const [step, setStep] = useState<Step>("sender");
-  const [sender, setSender] = useState(starterSender);
-  const [receiver, setReceiver] = useState(starterReceiver);
-  const [addressMode, setAddressMode] = useState<"book" | "hub" | "new">("book");
+  const [sender, setSender] = useState<Address>(emptySender);
+  const [receiver, setReceiver] = useState<Address>(emptyReceiver);
+  const [addressMode, setAddressMode] = useState<"book" | "hub" | "new">("new");
   const [receiverMode, setReceiverMode] = useState<"book" | "hub" | "new">("new");
   const [purpose, setPurpose] = useState("Personal (Items are not for sale)");
   const [currency, setCurrency] = useState("Nigerian Naira (NGN)");
   const [packaging, setPackaging] = useState("Box");
-  const [length, setLength] = useState(200);
+  const [length, setLength] = useState(30);
   const [width, setWidth] = useState(20);
   const [height, setHeight] = useState(10);
-  const [items, setItems] = useState<ParcelItem[]>([
-    { name: "Knitted cotton trousers", hsCode: "6113009038", weight: 10.5, quantity: 1, value: 200000, origin: "Nigeria" },
-  ]);
+  const [items, setItems] = useState<ParcelItem[]>([]);
   const [showItemModal, setShowItemModal] = useState(false);
-  const [itemDraft, setItemDraft] = useState<ParcelItem>({ name: "Men's cotton trousers", hsCode: "6113009038", weight: 10, quantity: 1, value: 200000, origin: "Nigeria" });
+  const [itemDraft, setItemDraft] = useState<ParcelItem>({
+    name: "",
+    hsCode: "",
+    weight: 1,
+    quantity: 1,
+    value: 50000,
+    origin: "Nigeria",
+  });
   const [ratesLoaded, setRatesLoaded] = useState(false);
   const [loadingRates, setLoadingRates] = useState(false);
   const [isLiveDhl, setIsLiveDhl] = useState(false);
@@ -145,25 +189,43 @@ export function AdminBookingFlow() {
     date: string;
   } | null>(null);
 
-  const volumetricWeight = useMemo(() => Number(((length * width * height) / 5000).toFixed(2)), [length, width, height]);
-  const actualWeight = useMemo(() => items.reduce((sum, item) => sum + item.weight * item.quantity, 0), [items]);
-  const chargeableWeight = Math.max(actualWeight, volumetricWeight);
-  const parcelValue = items.reduce((sum, item) => sum + item.value * item.quantity, 0);
+  const volumetricWeight = useMemo(
+    () => Number(((length * width * height) / 5000).toFixed(2)),
+    [length, width, height]
+  );
+  const actualWeight = useMemo(
+    () => items.reduce((sum, item) => sum + (item.weight || 0) * (item.quantity || 1), 0),
+    [items]
+  );
+  const chargeableWeight = Math.max(actualWeight, volumetricWeight, 1);
+  const parcelValue = items.reduce((sum, item) => sum + (item.value || 0) * (item.quantity || 1), 0);
 
-  const selectedRate = rates.find((rate) => rate.id === selectedRateId) ?? rates[0];
+  const selectedRate = rates.find((rate) => rate.id === selectedRateId) ?? rates[0] ?? {
+    id: "dhl",
+    name: "DHL Express",
+    service: "Express Worldwide",
+    pickup: "Within 1 business day",
+    delivery: "Within 2 business days",
+    amount: 150000,
+  };
+
   const insuranceFee = insurance ? Math.round(parcelValue * 0.033) : 0;
   const customsCharge = receiver.country.toLowerCase() === "nigeria" ? 0 : Math.round(parcelValue * 0.025);
   const serviceCharge = 500;
   const total = selectedRate.amount + insuranceFee + customsCharge + serviceCharge;
 
   async function fetchLiveRates() {
+    if (!receiver.country.trim()) {
+      alert("Please select a receiver destination country first.");
+      return;
+    }
     setLoadingRates(true);
     try {
       const res = await fetch("/api/carriers/rate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          originCountry: sender.country,
+          originCountry: sender.country || "Nigeria",
           originState: sender.state,
           originCity: sender.city,
           originPostalCode: sender.postalCode,
@@ -184,15 +246,38 @@ export function AdminBookingFlow() {
         setRates(data.rates);
         setIsLiveDhl(Boolean(data.isLiveDhl));
         setRatesLoaded(true);
+        const dhl = data.rates.find((r: Rate) => r.id === "dhl") || data.rates[0];
+        if (dhl) setSelectedRateId(dhl.id);
+      } else {
+        alert(data.message || "Unable to fetch live carrier rates. Check destination details.");
       }
     } catch (err) {
       console.error("[BookingFlow] Error fetching live rates:", err);
+      alert("Error contacting carrier rate service. Please try again.");
     } finally {
       setLoadingRates(false);
     }
   }
 
   function go(next: Step) {
+    if (step === "sender" && next === "receiver") {
+      if (!sender.firstName.trim() || !sender.phone.trim() || !sender.address1.trim() || !sender.country.trim()) {
+        alert("Please complete the sender's name, phone, address, and country to continue.");
+        return;
+      }
+    }
+    if (step === "receiver" && next === "items") {
+      if (!receiver.firstName.trim() || !receiver.phone.trim() || !receiver.address1.trim() || !receiver.country.trim()) {
+        alert("Please complete the receiver's name, phone, address, and destination country to continue.");
+        return;
+      }
+    }
+    if (step === "items" && (next === "addons" || next === "carrier" || next === "review")) {
+      if (items.length === 0) {
+        alert("Please add at least one item to your parcel before proceeding.");
+        return;
+      }
+    }
     if (next === "carrier" && !ratesLoaded && !loadingRates) {
       fetchLiveRates();
     }
@@ -243,8 +328,24 @@ export function AdminBookingFlow() {
   }
 
   function saveItem() {
-    setItems([itemDraft]);
+    if (!itemDraft.name.trim()) {
+      alert("Please enter an item name.");
+      return;
+    }
+    setItems((prev) => [...prev, itemDraft]);
+    setItemDraft({
+      name: "",
+      hsCode: "",
+      weight: 1,
+      quantity: 1,
+      value: 50000,
+      origin: "Nigeria",
+    });
     setShowItemModal(false);
+  }
+
+  function removeItem(index: number) {
+    setItems((prev) => prev.filter((_, i) => i !== index));
   }
 
   if (confirmed) {
@@ -269,7 +370,14 @@ export function AdminBookingFlow() {
               </button>
             </div>
             <p className="mt-2 text-sm text-zinc-500">
-              Live Verified Booking · Status: <span className="font-semibold text-emerald-600">PRE-TRANSIT</span> · {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+              Live Verified Booking · Status: <span className="font-semibold text-emerald-600">PRE-TRANSIT</span> ·{" "}
+              {new Date().toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </p>
           </div>
           <div className="flex gap-3">
@@ -296,7 +404,9 @@ export function AdminBookingFlow() {
             <section className="border border-zinc-100 bg-zinc-50 p-6">
               <h2 className="font-semibold text-zinc-900">Courier Information</h2>
               <div className="mt-5 flex items-center gap-4">
-                <span className="grid h-12 w-12 place-items-center bg-yellow-400 text-xs font-bold text-zinc-900">DHL</span>
+                <span className="grid h-12 w-12 place-items-center bg-yellow-400 text-xs font-bold text-zinc-900">
+                  {selectedRate.carrierCode || "DHL"}
+                </span>
                 <div>
                   <p className="font-semibold text-zinc-900">{selectedRate.name}</p>
                   <p className="text-sm text-zinc-500">{selectedRate.service}</p>
@@ -310,17 +420,24 @@ export function AdminBookingFlow() {
             <section className="border border-zinc-100 bg-zinc-50 p-6">
               <h2 className="font-semibold text-zinc-900">Parcel Information</h2>
               <p className="mt-4 text-sm text-zinc-700">
-                Purpose: personal, Total Weight: {actualWeight}kg, Volumetric Weight: {volumetricWeight}kg, Total Value: {money(parcelValue)}
+                Purpose: {purpose}, Total Weight: {actualWeight}kg, Volumetric Weight: {volumetricWeight}kg, Total Value: {money(parcelValue)}
               </p>
               {items.map((item, index) => (
-                <p key={item.name} className="mt-3 text-sm text-zinc-600">
-                  <span className="font-semibold text-[#5e1914]">PARCEL {index + 1}</span><br />
-                  {item.name}, {item.quantity} piece, {item.weight}kg, {money(item.value)}, {item.origin}
+                <p key={index} className="mt-3 text-sm text-zinc-600">
+                  <span className="font-semibold text-[#5e1914]">ITEM {index + 1}</span><br />
+                  {item.name}, {item.quantity} piece(s), {item.weight}kg, {money(item.value)}, Origin: {item.origin}
                 </p>
               ))}
             </section>
           </div>
-          <PaymentPanel title="Payment Details" total={total} shipping={selectedRate.amount} addOns={insuranceFee} customs={customsCharge} service={serviceCharge} />
+          <PaymentPanel
+            title="Payment Details"
+            total={total}
+            shipping={selectedRate.amount}
+            addOns={insuranceFee}
+            customs={customsCharge}
+            service={serviceCharge}
+          />
         </div>
       </div>
     );
@@ -334,36 +451,49 @@ export function AdminBookingFlow() {
           {step === "sender" && (
             <AddressStep
               title="Add Sender"
-              subtitle="How do you want to add an address?"
+              subtitle="Enter origin details or use the live address autocomplete."
               mode={addressMode}
               setMode={setAddressMode}
               address={sender}
               setAddress={setSender}
               onNext={() => go("receiver")}
-              showSelected
+              isSender
             />
           )}
           {step === "receiver" && (
             <AddressStep
               title="Add Receiver"
-              subtitle="Search from your saved addresses or create a new address."
+              subtitle="Enter recipient destination address or use the live autocomplete."
               mode={receiverMode}
               setMode={setReceiverMode}
               address={receiver}
               setAddress={setReceiver}
               onNext={() => go("items")}
+              isSender={false}
             />
           )}
           {step === "items" && (
             <section>
-              <PageTitle title="Add Items" subtitle="What is in your shipment?" />
+              <PageTitle title="Add Items" subtitle="Declare items and packaging details for carrier rating." />
               <div className="mt-8 grid gap-4 rounded-none bg-[#f6f1ea] p-5 md:grid-cols-2">
-                <SelectField label="Purpose of shipping" value={purpose} onChange={setPurpose} options={["Personal (Items are not for sale)", "Commercial", "Gift", "Documents"]} />
-                <SelectField label="Select Currency" value={currency} onChange={setCurrency} options={["Nigerian Naira (NGN)", "United States Dollar (USD)", "British Pound (GBP)"]} />
+                <SelectField
+                  label="Purpose of shipping"
+                  value={purpose}
+                  onChange={setPurpose}
+                  options={["Personal (Items are not for sale)", "Commercial", "Gift", "Documents"]}
+                />
+                <SelectField
+                  label="Select Currency"
+                  value={currency}
+                  onChange={setCurrency}
+                  options={["Nigerian Naira (NGN)", "United States Dollar (USD)", "British Pound (GBP)"]}
+                />
               </div>
               <div className="mt-8 rounded-none bg-[#f6f1ea] p-5">
                 <div className="flex items-center justify-between">
-                  <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900"><Package className="h-5 w-5 text-[#5e1914]" /> Parcel 1</h2>
+                  <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
+                    <Package className="h-5 w-5 text-[#5e1914]" /> Parcel Package Dimensions
+                  </h2>
                   <span className="border border-emerald-300 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700">
                     Volumetric weight = {volumetricWeight}kg
                   </span>
@@ -376,31 +506,64 @@ export function AdminBookingFlow() {
                 </div>
                 <div className="mt-6 rounded-none bg-white">
                   <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-4">
-                    <h3 className="font-semibold text-zinc-900">Items</h3>
-                    <button type="button" onClick={() => setShowItemModal(true)} className="text-sm font-semibold text-[#5e1914]">+ Add Item</button>
+                    <h3 className="font-semibold text-zinc-900">Declared Items ({items.length})</h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowItemModal(true)}
+                      className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#5e1914] hover:underline"
+                    >
+                      <Plus className="h-4 w-4" /> Add Item
+                    </button>
                   </div>
-                  {items.map((item) => (
-                    <div key={item.name} className="flex items-center justify-between px-4 py-4">
-                      <div>
-                        <p className="font-medium text-zinc-900">{item.name}</p>
-                        <p className="mt-1 text-sm text-zinc-500">{item.quantity} pcs · {item.weight} kg · {money(item.value)} · {item.origin}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button type="button" onClick={() => setShowItemModal(true)} className="border border-zinc-200 p-2 text-zinc-500"><Edit3 className="h-4 w-4" /></button>
-                        <button type="button" className="border border-zinc-200 p-2 text-zinc-500"><Trash2 className="h-4 w-4" /></button>
-                      </div>
+
+                  {items.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <Package className="mx-auto h-8 w-8 text-zinc-300" />
+                      <p className="mt-2 text-sm font-medium text-zinc-700">No items added yet</p>
+                      <p className="mt-1 text-xs text-zinc-500">Please click &quot;Add Item&quot; to declare what is inside the shipment.</p>
+                      <button
+                        type="button"
+                        onClick={() => setShowItemModal(true)}
+                        className="mt-4 rounded-none bg-[#5e1914] px-4 py-2 text-xs font-semibold text-white hover:bg-[#4a130f]"
+                      >
+                        + Add First Item
+                      </button>
                     </div>
-                  ))}
+                  ) : (
+                    items.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between border-b border-zinc-50 px-4 py-4">
+                        <div>
+                          <p className="font-medium text-zinc-900">{item.name}</p>
+                          <p className="mt-1 text-sm text-zinc-500">
+                            {item.quantity} pcs · {item.weight} kg · {money(item.value)} · Origin: {item.origin}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => removeItem(idx)}
+                            className="border border-zinc-200 p-2 text-zinc-500 hover:text-red-600"
+                            title="Remove item"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+
                   <div className="border-t border-zinc-100 px-4 py-4 text-sm font-semibold text-zinc-900">
-                    Parcel Weight: {actualWeight}kg, Parcel Value: {money(parcelValue)}
+                    Parcel Actual Weight: {actualWeight}kg · Declared Value: {money(parcelValue)}
                   </div>
                 </div>
                 <div className="mt-8 grid gap-8 md:grid-cols-3">
-                  {["Parcel Items", "Proof of Purchase", "Proof of Weight"].map((label) => (
+                  {["Parcel Items Invoice", "Proof of Purchase", "Proof of Weight"].map((label) => (
                     <div key={label}>
-                      <p className="text-sm font-medium text-zinc-800">{label} <span className="text-xs text-zinc-400 underline">View Sample</span></p>
-                      <button className="mt-3 flex items-center gap-2 rounded-none border border-zinc-100 bg-white px-4 py-3 text-sm text-zinc-700"><Upload className="h-4 w-4" /> Upload</button>
-                      <p className="mt-2 text-xs text-zinc-400">No file uploaded</p>
+                      <p className="text-sm font-medium text-zinc-800">{label} <span className="text-xs text-zinc-400 underline">Sample</span></p>
+                      <button className="mt-3 flex items-center gap-2 rounded-none border border-zinc-100 bg-white px-4 py-3 text-sm text-zinc-700 hover:bg-zinc-50">
+                        <Upload className="h-4 w-4" /> Upload Document
+                      </button>
+                      <p className="mt-2 text-xs text-zinc-400">Optional documentation</p>
                     </div>
                   ))}
                 </div>
@@ -410,7 +573,7 @@ export function AdminBookingFlow() {
           )}
           {step === "carrier" && (
             <section>
-              <PageTitle title="Select Carrier" subtitle="Choose your preferred rate." />
+              <PageTitle title="Select Carrier" subtitle="Real-time DHL and international carrier rates." />
               <div className="mt-6 grid gap-3 border border-zinc-100 bg-[#f7f1ef] p-5 sm:grid-cols-4">
                 <Metric label="Actual weight" value={`${actualWeight.toFixed(2)} kg`} />
                 <Metric label="Volumetric weight" value={`${volumetricWeight.toFixed(2)} kg`} />
@@ -420,39 +583,27 @@ export function AdminBookingFlow() {
               <div className="mt-6 flex items-center justify-between bg-[#f6f1ea] p-3">
                 <div className="flex gap-2">
                   <button className="rounded-none bg-zinc-900 px-4 py-2 text-sm text-white">DMX Network</button>
-                  <button className="rounded-none bg-white px-4 py-2 text-sm text-zinc-700">Personal Accounts</button>
+                  <button className="rounded-none bg-white px-4 py-2 text-sm text-zinc-700">Live Accounts</button>
                 </div>
                 <div className="flex items-center gap-3">
-                  <button className="border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-700">Sort by: Default</button>
                   <button
                     onClick={() => fetchLiveRates()}
                     disabled={loadingRates}
-                    className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-[#5e1914] hover:bg-[#f6f1ea] disabled:opacity-50"
+                    className="flex items-center gap-2 bg-white px-3 py-2 text-sm font-semibold text-[#5e1914] shadow-sm hover:bg-[#f6f1ea] disabled:opacity-50"
                   >
                     {loadingRates ? <Loader2 className="h-4 w-4 animate-spin text-[#5e1914]" /> : <RefreshCw className="h-4 w-4" />}
-                    {loadingRates ? "Fetching live rates..." : "Get rates"}
+                    {loadingRates ? "Calculating..." : "Recalculate Rates"}
                   </button>
                 </div>
               </div>
-              {!ratesLoaded ? (
-                <div className="mt-6 border border-dashed border-zinc-200 p-10 text-center">
-                  {loadingRates ? (
-                    <div className="flex flex-col items-center justify-center gap-2 py-4">
-                      <Loader2 className="h-8 w-8 animate-spin text-[#5e1914]" />
-                      <p className="font-semibold text-zinc-800">Querying Live DHL & Carrier Rates...</p>
-                      <p className="text-xs text-zinc-500">Calculating real-time rates based on destination zone and chargeable weight.</p>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="text-sm text-zinc-500">Pricing is the last lookup. Click Get rates after sender, receiver, and parcel details are ready.</p>
-                      <button
-                        onClick={() => fetchLiveRates()}
-                        className="mt-4 inline-flex items-center gap-2 rounded-none bg-[#5e1914] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#4a130f]"
-                      >
-                        <RefreshCw className="h-4 w-4" /> Fetch Live Rates
-                      </button>
-                    </div>
-                  )}
+
+              {loadingRates ? (
+                <div className="mt-6 border border-dashed border-zinc-200 p-12 text-center">
+                  <Loader2 className="mx-auto h-8 w-8 animate-spin text-[#5e1914]" />
+                  <p className="mt-4 font-semibold text-zinc-800">Contacting Carrier Rates Engine...</p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Querying live DHL rates for {receiver.country} ({chargeableWeight.toFixed(2)} kg).
+                  </p>
                 </div>
               ) : (
                 <div className="mt-4 space-y-3">
@@ -464,10 +615,12 @@ export function AdminBookingFlow() {
                         setSelectedRateId(rate.id);
                         setDropoffOpen(true);
                       }}
-                      className={`w-full border bg-white p-4 text-left transition-colors ${selectedRateId === rate.id ? "border-[#5e1914] shadow-sm" : "border-zinc-100 hover:border-zinc-300"}`}
+                      className={`w-full border bg-white p-4 text-left transition-colors ${selectedRateId === rate.id ? "border-[#5e1914] shadow-sm ring-1 ring-[#5e1914]" : "border-zinc-100 hover:border-zinc-300"}`}
                     >
                       <div className="flex items-center gap-4">
-                        <span className="grid h-9 w-9 place-items-center bg-yellow-400 text-[10px] font-bold text-zinc-900">{rate.name.slice(0, 3).toUpperCase()}</span>
+                        <span className="grid h-10 w-10 place-items-center bg-yellow-400 text-xs font-bold text-zinc-900">
+                          {rate.id === "dhl" ? "DHL" : rate.name.slice(0, 3).toUpperCase()}
+                        </span>
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-semibold text-zinc-900">{rate.name}</p>
@@ -479,11 +632,11 @@ export function AdminBookingFlow() {
                             ) : null}
                           </div>
                           <p className="text-sm text-zinc-500">{rate.service}</p>
-                          <p className="mt-2 text-xs text-zinc-600">Pickup: {rate.pickup} · Delivery: {rate.delivery}</p>
+                          <p className="mt-1 text-xs text-zinc-600">Pickup: {rate.pickup} · Delivery: {rate.delivery}</p>
                         </div>
                         <div className="ml-auto text-right">
                           <p className="text-xl font-bold text-zinc-900">{money(rate.amount)}</p>
-                          <span className={`mt-2 inline-block px-4 py-2 text-sm font-semibold ${selectedRateId === rate.id ? "bg-[#5e1914] text-white" : "border border-[#5e1914] text-[#5e1914]"}`}>
+                          <span className={`mt-2 inline-block px-4 py-1.5 text-xs font-semibold ${selectedRateId === rate.id ? "bg-[#5e1914] text-white" : "border border-[#5e1914] text-[#5e1914]"}`}>
                             {selectedRateId === rate.id ? "Selected" : "Select"}
                           </span>
                         </div>
@@ -492,11 +645,12 @@ export function AdminBookingFlow() {
                   ))}
                 </div>
               )}
+
               <div className="mt-6 border border-zinc-100 bg-white p-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <p className="font-semibold text-zinc-900">Checkout add-ons</p>
-                    <p className="mt-1 text-sm text-zinc-500">Included after courier selection so the payment total is clear.</p>
+                    <p className="font-semibold text-zinc-900">Total Breakdown</p>
+                    <p className="mt-1 text-sm text-zinc-500">Destination: {receiver.country || "Not specified"}</p>
                   </div>
                   <p className="text-right text-sm font-semibold text-[#5e1914]">Payable estimate {money(total)}</p>
                 </div>
@@ -506,30 +660,28 @@ export function AdminBookingFlow() {
                   <ChargePill label="Service charge" value={money(serviceCharge)} />
                 </div>
               </div>
-              <div className="mt-6 bg-amber-100 p-5 text-sm text-zinc-700">
-                <p className="font-semibold text-zinc-900">Can&apos;t find a carrier?</p>
-                <ul className="mt-2 list-disc space-y-1 pl-5">
-                  <li>Some carriers have no available rates for this route.</li>
-                  <li>Invalid postcode or address formats can hide rates.</li>
-                  <li>Try refreshing after checking receiver and parcel details.</li>
-                </ul>
-              </div>
-              <FooterActions onPrevious={() => go("addons")} onNext={() => go("review")} disabled={!ratesLoaded} />
+              <FooterActions onPrevious={() => go("addons")} onNext={() => go("review")} disabled={loadingRates} />
             </section>
           )}
           {step === "addons" && (
             <section>
-              <PageTitle title="Add-ons" subtitle="Choose optional services to protect, estimate duties, and meet compliance requirements." />
+              <PageTitle title="Add-ons" subtitle="Choose optional protection and insurance for this shipment." />
               <div className="mt-8 border border-zinc-100">
-                <div className="bg-[#f6f1ea] px-5 py-4 font-semibold text-zinc-900">Insurance</div>
+                <div className="bg-[#f6f1ea] px-5 py-4 font-semibold text-zinc-900">Insurance Protection</div>
                 <div className="flex items-center justify-between px-5 py-6">
                   <div className="flex items-center gap-3">
                     <ShieldCheck className="h-5 w-5 text-[#5e1914]" />
-                    <span className="font-medium text-zinc-800">DMX Protection</span>
+                    <div>
+                      <span className="font-medium text-zinc-800">DMX Cargo Protection</span>
+                      <p className="text-xs text-zinc-500">Covers 100% declared value against loss or transit damage</p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-6">
                     <span className="text-xl font-bold text-zinc-900">{money(insuranceFee)}</span>
-                    <button onClick={() => setInsurance((value) => !value)} className="rounded-none bg-[#5e1914] px-5 py-3 text-sm font-semibold text-white hover:bg-[#4a130f]">
+                    <button
+                      onClick={() => setInsurance((value) => !value)}
+                      className="rounded-none bg-[#5e1914] px-5 py-3 text-sm font-semibold text-white hover:bg-[#4a130f]"
+                    >
                       {insurance ? "Added" : "Add"}
                     </button>
                   </div>
@@ -541,7 +693,7 @@ export function AdminBookingFlow() {
           )}
           {step === "review" && (
             <section>
-              <PageTitle title="Review Shipment" subtitle="Confirm all details below before making payment." />
+              <PageTitle title="Review Shipment" subtitle="Confirm all details below before booking." />
               <div className="mt-6 space-y-5">
                 <ReviewRow title="Sender" onEdit={() => go("sender")}>
                   <AddressPreview address={sender} />
@@ -550,9 +702,13 @@ export function AdminBookingFlow() {
                   <AddressPreview address={receiver} />
                 </ReviewRow>
                 <ReviewRow title="Parcel Information" onEdit={() => go("items")}>
-                  <p>Purpose: personal, Total Weight: {actualWeight}kg, Volumetric Weight: {volumetricWeight}kg, Currency: NGN, Total Value: {money(parcelValue)}</p>
-                  <p className="mt-2 font-semibold">Parcel 1 - {packaging} - {length}x{width}x{height} ({length}cm x {width}cm x {height}cm)</p>
-                  <p className="mt-1 text-zinc-500">{items[0]?.name}, {items[0]?.quantity} piece, {items[0]?.weight}kg, {money(items[0]?.value ?? 0)}, NG.</p>
+                  <p>Purpose: {purpose}, Total Weight: {actualWeight}kg, Chargeable Weight: {chargeableWeight}kg, Currency: {currency}</p>
+                  <p className="mt-2 font-semibold">Packaging: {packaging} ({length}x{width}x{height} cm)</p>
+                  {items.map((it, idx) => (
+                    <p key={idx} className="mt-1 text-zinc-500">
+                      • {it.name} - {it.quantity} pc(s), {it.weight}kg, {money(it.value)}, Origin: {it.origin}
+                    </p>
+                  ))}
                 </ReviewRow>
                 <ReviewRow title="Carrier Information" onEdit={() => go("carrier")}>
                   <p className="font-semibold">{selectedRate.name} <span className="ml-3">{money(selectedRate.amount)}</span></p>
@@ -577,27 +733,64 @@ export function AdminBookingFlow() {
       </div>
 
       {showItemModal && (
-        <div className="fixed inset-0 z-40 grid place-items-center bg-black/40 px-4">
-          <div className="w-full max-w-lg bg-white shadow-xl">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
+          <div className="w-full max-w-lg bg-white shadow-2xl">
             <div className="flex items-start justify-between border-b border-zinc-100 p-6">
               <div>
-                <h2 className="text-xl font-semibold text-zinc-900">Add Item</h2>
-                <p className="mt-1 text-sm text-zinc-500">False item details or undervaluation may lead to account suspension.</p>
+                <h2 className="text-xl font-semibold text-zinc-900">Add Item to Package</h2>
+                <p className="mt-1 text-sm text-zinc-500">Accurate item details ensure smooth customs clearance.</p>
               </div>
               <button onClick={() => setShowItemModal(false)}><X className="h-5 w-5" /></button>
             </div>
             <div className="space-y-4 p-6">
-              <TextField label="Item name" value={itemDraft.name} onChange={(value) => setItemDraft((item) => ({ ...item, name: value }))} />
-              <TextField label="HS Code" value={itemDraft.hsCode} onChange={(value) => setItemDraft((item) => ({ ...item, hsCode: value }))} />
+              <TextField
+                label="Item name / Description *"
+                value={itemDraft.name}
+                onChange={(value) => setItemDraft((item) => ({ ...item, name: value }))}
+              />
+              <TextField
+                label="HS Tariff Code (Optional)"
+                value={itemDraft.hsCode}
+                onChange={(value) => setItemDraft((item) => ({ ...item, hsCode: value }))}
+              />
               <div className="grid gap-4 md:grid-cols-2">
-                <NumberField label="Weight (kg)" value={itemDraft.weight} onChange={(value) => setItemDraft((item) => ({ ...item, weight: value }))} />
-                <NumberField label="Quantity" value={itemDraft.quantity} onChange={(value) => setItemDraft((item) => ({ ...item, quantity: value }))} />
+                <NumberField
+                  label="Weight (kg) *"
+                  value={itemDraft.weight}
+                  onChange={(value) => setItemDraft((item) => ({ ...item, weight: value }))}
+                />
+                <NumberField
+                  label="Quantity *"
+                  value={itemDraft.quantity}
+                  onChange={(value) => setItemDraft((item) => ({ ...item, quantity: value }))}
+                />
               </div>
-              <NumberField label="Item Value" value={itemDraft.value} onChange={(value) => setItemDraft((item) => ({ ...item, value }))} />
+              <NumberField
+                label="Item Value (NGN) *"
+                value={itemDraft.value}
+                onChange={(value) => setItemDraft((item) => ({ ...item, value }))}
+              />
+              <CountrySelect
+                label="Country of Origin"
+                value={itemDraft.origin}
+                onChange={(value) => setItemDraft((item) => ({ ...item, origin: value }))}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3 border-t border-zinc-100 p-6">
-              <button onClick={() => setShowItemModal(false)} className="border border-[#5e1914] px-4 py-3 font-semibold text-[#5e1914]">Cancel</button>
-              <button onClick={saveItem} className="bg-[#5e1914] px-4 py-3 font-semibold text-white hover:bg-[#4a130f]">Save item</button>
+              <button
+                type="button"
+                onClick={() => setShowItemModal(false)}
+                className="border border-[#5e1914] px-4 py-3 font-semibold text-[#5e1914]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveItem}
+                className="bg-[#5e1914] px-4 py-3 font-semibold text-white hover:bg-[#4a130f]"
+              >
+                Save Item
+              </button>
             </div>
           </div>
         </div>
@@ -611,24 +804,52 @@ export function AdminBookingFlow() {
               <button onClick={() => setDropoffOpen(false)}><X className="h-5 w-5" /></button>
             </div>
             <div className="space-y-4 p-6">
-              <p className="font-semibold text-zinc-900">Would you like to pick up your shipment?</p>
-              <RadioLine checked={pickupMode === "pickup"} onClick={() => setPickupMode("pickup")} label="No, I want my shipment picked up from my address." />
-              <RadioLine checked={pickupMode === "dropoff"} onClick={() => setPickupMode("dropoff")} label="Yes, I would like to drop-off at a nearby location." />
+              <p className="font-semibold text-zinc-900">Would you like pickup or hub drop-off?</p>
+              <RadioLine
+                checked={pickupMode === "pickup"}
+                onClick={() => setPickupMode("pickup")}
+                label="Pickup: Collect package from sender's address."
+              />
+              <RadioLine
+                checked={pickupMode === "dropoff"}
+                onClick={() => setPickupMode("dropoff")}
+                label="Drop-off: I will drop off at a nearby DMX Hub branch."
+              />
               {pickupMode === "dropoff" && (
                 <div className="max-h-72 space-y-3 overflow-auto pt-2">
                   {branches.map((branch, index) => (
-                    <button key={branch.name} onClick={() => setSelectedBranch(index)} className="flex w-full items-center gap-4 border border-zinc-100 p-4 text-left">
+                    <button
+                      key={branch.name}
+                      onClick={() => setSelectedBranch(index)}
+                      className="flex w-full items-center gap-4 border border-zinc-100 p-4 text-left"
+                    >
                       <MapPin className="h-5 w-5 text-zinc-500" />
-                      <span className="flex-1 text-sm text-zinc-700">{branch.name}<br /><span className="text-xs text-[#5e1914]">{branch.distance}</span></span>
-                      <span className={`border px-4 py-2 text-sm font-semibold ${selectedBranch === index ? "border-[#5e1914] bg-[#5e1914] text-white" : "border-[#5e1914] text-[#5e1914]"}`}>{selectedBranch === index ? "Selected" : "Select"}</span>
+                      <span className="flex-1 text-sm text-zinc-700">
+                        {branch.name}
+                        <br />
+                        <span className="text-xs text-[#5e1914]">{branch.distance}</span>
+                      </span>
+                      <span
+                        className={`border px-4 py-2 text-sm font-semibold ${
+                          selectedBranch === index
+                            ? "border-[#5e1914] bg-[#5e1914] text-white"
+                            : "border-[#5e1914] text-[#5e1914]"
+                        }`}
+                      >
+                        {selectedBranch === index ? "Selected" : "Select"}
+                      </span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
             <div className="grid grid-cols-2 gap-3 border-t border-zinc-100 p-6">
-              <button onClick={() => setDropoffOpen(false)} className="border border-zinc-200 px-4 py-3 font-semibold text-zinc-700">Cancel</button>
-              <button onClick={() => setDropoffOpen(false)} className="bg-[#5e1914] px-4 py-3 font-semibold text-white hover:bg-[#4a130f]">Save and continue</button>
+              <button onClick={() => setDropoffOpen(false)} className="border border-zinc-200 px-4 py-3 font-semibold text-zinc-700">
+                Cancel
+              </button>
+              <button onClick={() => setDropoffOpen(false)} className="bg-[#5e1914] px-4 py-3 font-semibold text-white hover:bg-[#4a130f]">
+                Save and continue
+              </button>
             </div>
           </div>
         </div>
@@ -642,7 +863,12 @@ function StepNav({ step, setStep }: { step: Step; setStep: (step: Step) => void 
     <div className="mb-10 flex flex-wrap items-center gap-2 text-sm">
       {steps.map((item, index) => (
         <div key={item.id} className="flex items-center gap-2">
-          <button onClick={() => setStep(item.id)} className={item.id === step ? "font-semibold text-[#5e1914]" : "text-zinc-500"}>{item.label}</button>
+          <button
+            onClick={() => setStep(item.id)}
+            className={item.id === step ? "font-semibold text-[#5e1914]" : "text-zinc-500 hover:text-zinc-800"}
+          >
+            {item.label}
+          </button>
           {index < steps.length - 1 ? <span className="h-px w-6 bg-[#b98d87]" /> : null}
         </div>
       ))}
@@ -654,8 +880,170 @@ function PageTitle({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <header>
       <h1 className="text-4xl font-semibold tracking-tight text-zinc-900">{title}</h1>
-      <p className="mt-6 text-sm text-zinc-600">{subtitle}</p>
+      <p className="mt-3 text-sm text-zinc-600">{subtitle}</p>
     </header>
+  );
+}
+
+function MapboxAddressSearch({
+  onSelect,
+  placeholder,
+}: {
+  onSelect: (parsed: {
+    address: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  }) => void;
+  placeholder?: string;
+}) {
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!query.trim() || query.trim().length < 3) {
+      setSuggestions([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const url = `/api/places/autocomplete?q=${encodeURIComponent(
+          query.trim()
+        )}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.features)) {
+            setSuggestions(data.features);
+            setOpen(true);
+          }
+        }
+      } catch (err) {
+        console.error("Mapbox geocoding error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const handleSelect = (feature: any) => {
+    let streetNumber = feature.address || "";
+    let streetName = feature.text || "";
+    let address = "";
+    if (streetNumber && streetName) {
+      address = `${streetNumber}, ${streetName}`;
+    } else if (streetName) {
+      address = streetName;
+    } else {
+      address = feature.place_name.split(",")[0] || "";
+    }
+
+    let postalCode = "";
+    let city = "";
+    let state = "";
+    let countryName = "";
+
+    if (feature.context && Array.isArray(feature.context)) {
+      for (const ctx of feature.context) {
+        if (typeof ctx.id === "string") {
+          if (ctx.id.startsWith("postcode")) {
+            postalCode = ctx.text;
+          } else if (ctx.id.startsWith("place") || ctx.id.startsWith("locality")) {
+            if (!city) city = ctx.text;
+          } else if (ctx.id.startsWith("region")) {
+            state = ctx.text;
+          } else if (ctx.id.startsWith("country")) {
+            const short = ctx.short_code ? String(ctx.short_code).toUpperCase() : "";
+            const matched = sortedCountries.find(
+              (c) =>
+                (short && c.Code.toUpperCase() === short) ||
+                c.Name.toLowerCase() === ctx.text.toLowerCase()
+            );
+            countryName = matched ? matched.Name : ctx.text;
+          }
+        }
+      }
+    }
+
+    onSelect({
+      address: address || feature.place_name,
+      city,
+      state,
+      postalCode,
+      country: countryName,
+    });
+
+    setQuery(feature.place_name);
+    setOpen(false);
+  };
+
+  return (
+    <div ref={containerRef} className="relative md:col-span-2">
+      <label className="block">
+        <span className="mb-2 flex items-center justify-between text-sm font-medium text-zinc-800">
+          <span className="flex items-center gap-1.5 font-semibold text-[#5e1914]">
+            <MapPin className="h-4 w-4" /> Live Mapbox Places Autocomplete
+          </span>
+          <span className="text-xs text-zinc-400">Search any global street, city, or place</span>
+        </span>
+        <div className="relative">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => {
+              if (suggestions.length > 0) setOpen(true);
+            }}
+            placeholder={placeholder || "Start typing street address (e.g. 10 Downing Street or 3 Oriwu Lekki)..."}
+            className="w-full rounded-none border border-zinc-300 bg-white px-4 py-3 pl-10 text-sm outline-none focus:border-[#5e1914] focus:ring-1 focus:ring-[#5e1914]"
+          />
+          <Search className="absolute left-3 top-3.5 h-4 w-4 text-zinc-400" />
+          {loading && (
+            <Loader2 className="absolute right-3 top-3.5 h-4 w-4 animate-spin text-[#5e1914]" />
+          )}
+        </div>
+      </label>
+
+      {open && suggestions.length > 0 && (
+        <div className="absolute left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto border border-zinc-200 bg-white shadow-xl">
+          <div className="border-b border-zinc-100 bg-[#f7f1ef] px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-[#5e1914]">
+            Select Address To Autofill
+          </div>
+          {suggestions.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => handleSelect(item)}
+              className="flex w-full items-start gap-3 border-b border-zinc-50 px-3 py-2.5 text-left text-xs text-zinc-800 hover:bg-[#f7f1ef]"
+            >
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#5e1914]" />
+              <div className="flex-1">
+                <p className="font-semibold text-zinc-900">{item.text}</p>
+                <p className="text-zinc-500">{item.place_name}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -667,7 +1055,7 @@ function AddressStep({
   address,
   setAddress,
   onNext,
-  showSelected = false,
+  isSender = false,
 }: {
   title: string;
   subtitle: string;
@@ -676,54 +1064,177 @@ function AddressStep({
   address: Address;
   setAddress: (address: Address) => void;
   onNext: () => void;
-  showSelected?: boolean;
+  isSender?: boolean;
 }) {
+  const handleMapboxAutofill = (parsed: {
+    address: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  }) => {
+    setAddress({
+      ...address,
+      address1: parsed.address || address.address1,
+      city: parsed.city || address.city,
+      state: parsed.state || address.state,
+      postalCode: parsed.postalCode || address.postalCode,
+      country: parsed.country || address.country,
+    });
+  };
+
   return (
     <section>
       <PageTitle title={title} subtitle={subtitle} />
       <div className="mt-8 grid gap-3 md:grid-cols-3">
         {[
+          ["new", "Enter Address / Live Search"],
           ["book", "Use Address Book"],
           ["hub", "Use Hub Address"],
-          ["new", "Enter New Address"],
         ].map(([id, label]) => (
-          <button key={id} onClick={() => setMode(id as "book" | "hub" | "new")} className={`border p-5 text-left font-semibold ${mode === id ? "border-[#5e1914] bg-[#f7f1ef] text-zinc-900" : "border-zinc-100 text-zinc-700"}`}>
-            <span className={`mb-5 block h-4 w-4 rounded-full border ${mode === id ? "border-[#5e1914] bg-[#5e1914]" : "border-zinc-200"}`} />
+          <button
+            key={id}
+            type="button"
+            onClick={() => setMode(id as "book" | "hub" | "new")}
+            className={`border p-5 text-left font-semibold ${
+              mode === id ? "border-[#5e1914] bg-[#f7f1ef] text-zinc-900" : "border-zinc-100 text-zinc-700"
+            }`}
+          >
+            <span
+              className={`mb-5 block h-4 w-4 rounded-full border ${
+                mode === id ? "border-[#5e1914] bg-[#5e1914]" : "border-zinc-200"
+              }`}
+            />
             {label}
           </button>
         ))}
       </div>
+
       {mode === "new" ? (
         <div className="mt-8 bg-[#f6f1ea]">
-          <h2 className="border-b border-zinc-200 px-5 py-4 font-semibold text-zinc-900">Enter New Address</h2>
+          <h2 className="border-b border-zinc-200 px-5 py-4 font-semibold text-zinc-900">
+            {isSender ? "Sender Origin Address" : "Receiver Destination Address"}
+          </h2>
           <div className="grid gap-4 p-5 md:grid-cols-2">
-            <TextField label="First Name" value={address.firstName} onChange={(value) => setAddress({ ...address, firstName: value })} />
-            <TextField label="Last Name" value={address.lastName} onChange={(value) => setAddress({ ...address, lastName: value })} />
-            <TextField className="md:col-span-2" label="Address line 1" value={address.address1} onChange={(value) => setAddress({ ...address, address1: value })} />
-            <TextField className="md:col-span-2" label="Address line 2" value={address.address2} onChange={(value) => setAddress({ ...address, address2: value })} />
-            <TextField label="Country" value={address.country} onChange={(value) => setAddress({ ...address, country: value })} />
-            <TextField label="State/Province" value={address.state} onChange={(value) => setAddress({ ...address, state: value })} />
-            <TextField label="City" value={address.city} onChange={(value) => setAddress({ ...address, city: value })} />
-            <TextField label="Postal / ZIP code" value={address.postalCode} onChange={(value) => setAddress({ ...address, postalCode: value })} />
-            <TextField label="Phone Number" value={address.phone} onChange={(value) => setAddress({ ...address, phone: value })} />
-            <TextField label="Email Address" value={address.email} onChange={(value) => setAddress({ ...address, email: value })} />
-            <TextField label="Alternate Phone Number" value={address.alternatePhone} onChange={(value) => setAddress({ ...address, alternatePhone: value })} />
+            <MapboxAddressSearch
+              onSelect={handleMapboxAutofill}
+              placeholder={isSender ? "Search sender address in Nigeria or globally..." : "Search destination address (UK, US, Canada, etc.)..."}
+            />
+
+            <TextField
+              label="First Name *"
+              value={address.firstName}
+              onChange={(value) => setAddress({ ...address, firstName: value })}
+            />
+            <TextField
+              label="Last Name *"
+              value={address.lastName}
+              onChange={(value) => setAddress({ ...address, lastName: value })}
+            />
+            <TextField
+              className="md:col-span-2"
+              label="Address line 1 *"
+              value={address.address1}
+              onChange={(value) => setAddress({ ...address, address1: value })}
+            />
+            <TextField
+              className="md:col-span-2"
+              label="Address line 2 (Optional)"
+              value={address.address2}
+              onChange={(value) => setAddress({ ...address, address2: value })}
+            />
+            <CountrySelect
+              label="Country *"
+              value={address.country}
+              onChange={(value) => setAddress({ ...address, country: value })}
+            />
+            <TextField
+              label="State / Province *"
+              value={address.state}
+              onChange={(value) => setAddress({ ...address, state: value })}
+            />
+            <TextField
+              label="City *"
+              value={address.city}
+              onChange={(value) => setAddress({ ...address, city: value })}
+            />
+            <TextField
+              label="Postal / ZIP Code *"
+              value={address.postalCode}
+              onChange={(value) => setAddress({ ...address, postalCode: value })}
+            />
+            <TextField
+              label="Phone Number *"
+              value={address.phone}
+              onChange={(value) => setAddress({ ...address, phone: value })}
+            />
+            <TextField
+              label="Email Address (Optional)"
+              value={address.email}
+              onChange={(value) => setAddress({ ...address, email: value })}
+            />
+            <TextField
+              label="Alternate Phone Number (Optional)"
+              value={address.alternatePhone}
+              onChange={(value) => setAddress({ ...address, alternatePhone: value })}
+            />
           </div>
         </div>
       ) : (
         <div className="mt-8 border border-zinc-100">
-          <h2 className="bg-[#f6f1ea] px-5 py-4 font-semibold text-zinc-900">{showSelected ? "Selected Address" : "Saved Address"}</h2>
+          <h2 className="bg-[#f6f1ea] px-5 py-4 font-semibold text-zinc-900">
+            {mode === "hub" ? "Hub Location Address" : "Saved Contact"}
+          </h2>
           <div className="p-5">
-            <AddressPreview address={address} />
+            {compactAddress(address) ? (
+              <AddressPreview address={address} />
+            ) : (
+              <p className="text-sm text-zinc-500">No saved address selected yet. Switch to &quot;Enter Address&quot; to input details or use live search.</p>
+            )}
             <div className="mt-6 flex gap-3">
-              <button className="border border-[#5e1914] px-5 py-3 font-semibold text-[#5e1914]">Edit this address</button>
-              <button className="border border-[#5e1914] px-5 py-3 font-semibold text-[#5e1914]">Use another address</button>
+              <button
+                type="button"
+                onClick={() => setMode("new")}
+                className="border border-[#5e1914] px-5 py-2.5 text-sm font-semibold text-[#5e1914]"
+              >
+                Enter Custom Address
+              </button>
             </div>
           </div>
         </div>
       )}
       <FooterActions onNext={onNext} />
     </section>
+  );
+}
+
+function CountrySelect({
+  value,
+  onChange,
+  label = "Country",
+  className = "",
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <label className={`block ${className}`}>
+      <span className="mb-2 block text-sm font-medium text-zinc-700">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-none border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#5e1914] focus:ring-1 focus:ring-[#5e1914]"
+      >
+        <option value="">-- Select Country ({sortedCountries.length} countries) --</option>
+        {sortedCountries.map((c) => (
+          <option key={c._id} value={c.Name}>
+            {c.Name} ({c.Code})
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -797,8 +1308,10 @@ function PaymentPanel({
         </div>
         <Line label="Total" value={money(total)} className="mt-5 font-semibold" />
         <div className="mt-8 rounded-none border border-zinc-100 p-5">
-          <p className="text-xs text-zinc-500">Wallet Balance</p>
-          <p className="mt-3 text-2xl font-bold text-zinc-900">₦38,265.40 <span className="ml-2 bg-red-50 px-2 py-1 text-xs font-medium text-red-500">Low balance</span></p>
+          <p className="text-xs text-zinc-500">Wallet / Balance Status</p>
+          <p className="mt-3 text-2xl font-bold text-zinc-900">
+            ₦38,265.40 <span className="ml-2 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-600">Active</span>
+          </p>
         </div>
         <button
           onClick={onPay}
@@ -873,8 +1386,8 @@ function AddressPreview({ address }: { address: Address }) {
   return (
     <div className="text-sm leading-7 text-zinc-800">
       <p className="font-semibold">{address.firstName} {address.lastName}</p>
-      <p>{address.email}</p>
-      <p>{address.phone}{address.alternatePhone ? `, ${address.alternatePhone}` : ""}</p>
+      {address.email ? <p>{address.email}</p> : null}
+      {address.phone ? <p>{address.phone}{address.alternatePhone ? `, ${address.alternatePhone}` : ""}</p> : null}
       <p>{compactAddress(address)}</p>
     </div>
   );
@@ -884,7 +1397,11 @@ function TextField({ label, value, onChange, className = "" }: { label: string; 
   return (
     <label className={`block ${className}`}>
       <span className="mb-2 block text-sm font-medium text-zinc-700">{label}</span>
-      <input value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-none border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#5e1914] focus:ring-1 focus:ring-[#5e1914]" />
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-none border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#5e1914] focus:ring-1 focus:ring-[#5e1914]"
+      />
     </label>
   );
 }
@@ -893,7 +1410,12 @@ function NumberField({ label, value, onChange }: { label: string; value: number;
   return (
     <label className="block">
       <span className="mb-2 block text-sm font-medium text-zinc-700">{label}</span>
-      <input type="number" value={value} onChange={(event) => onChange(Number(event.target.value))} className="w-full rounded-none border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#5e1914] focus:ring-1 focus:ring-[#5e1914]" />
+      <input
+        type="number"
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="w-full rounded-none border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#5e1914] focus:ring-1 focus:ring-[#5e1914]"
+      />
     </label>
   );
 }
@@ -902,7 +1424,11 @@ function SelectField({ label, value, onChange, options }: { label: string; value
   return (
     <label className="block">
       <span className="mb-2 block text-sm font-medium text-zinc-700">{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-none border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#5e1914] focus:ring-1 focus:ring-[#5e1914]">
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-none border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#5e1914] focus:ring-1 focus:ring-[#5e1914]"
+      >
         {options.map((option) => <option key={option}>{option}</option>)}
       </select>
     </label>
